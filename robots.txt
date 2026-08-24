@@ -1,2 +1,4 @@
 User-agent: *
 Allow: /
+
+Sitemap: https://kotvhapke.github.io/FairBike/sitemap.xml
