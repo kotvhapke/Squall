@@ -1,0 +1,38 @@
+Полностью исправь и проверь файл supabase/functions/livekit-token/index.ts. Не исправляй отдельный фрагмент - проверь весь файл от первой до последней строки.
+
+Сейчас в коде повреждены строки. Они должны быть такими:
+const LIVEKIT_URL = Deno.env.get("LIVEKIT_URL")!;
+const LIVEKIT_API_KEY = Deno.env.get("LIVEKIT_API_KEY")!;
+const LIVEKIT_API_SECRET = Deno.env.get("LIVEKIT_API_SECRET")!;
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+После успешной проверки пользователя строка должна быть:
+const userId = user.id;
+
+Удали все маркеры ||||, ***, обрезанные строки и синтаксические ошибки. Значения секретов в код не вставляй.
+
+Проверь и восстанови всю функцию:
+
+1. OPTIONS/CORS и только POST.
+2. Проверка Authorization JWT через supabase.auth.getUser().
+3. Поддержка call_session_id и voice_channel_id.
+4. Для call_session_id используй фактическую таблицу calls.
+5. Для voice_channel_id ищи канал в channels по реальному ID, проверяй type = voice и членство через server_members.
+6. Для DM проверяй членство через direct_conversation_members.
+7. Во всех подсчётах участников используй .select("*", { count: "exact", head: true }).
+8. Сверь таблицы, колонки и типы ID с миграциями проекта.
+9. RoomName должен совпадать с форматом Flutter-клиента.
+10. Создавай LiveKit-токен через await at.toJwt() с roomJoin, canPublish и canSubscribe.
+11. Добавь понятные статусы 400/401/403/404/409/500, не показывая токены, ключи или секреты.
+
+После исправления:
+
+• проверь TypeScript/Deno-синтаксис;
+• сравни локальный файл с кодом в Supabase Dashboard;
+• не применяй SQL и не деплой автоматически;
+• покажи полный исправленный index.ts без значений секретов;
+• сообщи, совпадает ли код в Dashboard с локальным;
+• дай точные шаги: открыть livekit-token → Code → заменить весь index.ts → Deploy.
+
+Также проверь Dart-вызов функции и формат voice_channel_id, но не меняй несвязанный код.
