@@ -4,6 +4,6 @@
   "private": true,
   "description": "Squall — Flutter Web build pipeline for Vercel",
   "scripts": {
-    "vercel-build": "bash .vercel/build.sh"
+    "vercel-build": "bash vercel-build.sh"
   }
 }
