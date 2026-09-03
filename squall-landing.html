@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="favicon.png">
+<title>Squall — Голосовые каналы, видеозвонки, Party Finder</title>
+<style>
+  :root {
+    --bg: #010104;
+    --surface: #040814;
+    --blue: #0A4D9F;
+    --accent: #002D6A;
+    --neon: #004488;
+    --ink: #b8c0d0;
+    --muted: #2a3a58;
+    --success: #36D66E;
+    --warning: #FFB836;
+    --glow-accent: 0 0 12px rgba(0,45,106,.3), 0 0 40px rgba(0,45,106,.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+    overflow-x: hidden;
+  }
+  #bg-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
+  .container { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
+
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: .75rem 2rem;
+    background: rgba(1,1,4,.7);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0,45,106,.2);
+  }
+  nav .logo {
+    font-size: 1.3rem; font-weight: 700;
+    background: linear-gradient(135deg, #002D6A, #004488);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 1px;
+  }
+  nav a { color: var(--muted); text-decoration: none; margin-left: 1.75rem; font-size: .9rem; transition: color .2s; }
+  nav a:hover { color: var(--accent); }
+  .nav-cta {
+    background: linear-gradient(135deg, #0044AA, var(--accent));
+    color: #fff !important; padding: .4rem 1.2rem; border-radius: 6px;
+    font-weight: 600;
+    transition: box-shadow .3s, transform .2s;
+  }
+  .nav-cta:hover { box-shadow: var(--glow-accent); transform: translateY(-1px); }
+
+  .hero {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 6rem 1.5rem 4rem; position: relative;
+  }
+  .hero-content { position: relative; z-index: 2; width: 100%; max-width: 640px; margin: 0 auto; text-align: center; }
+  .hero h1 {
+    font-size: clamp(3rem, 8vw, 5.5rem);
+    font-weight: 800; line-height: 1.05;
+    background: linear-gradient(135deg, #fff 20%, #002D6A, #004488);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero .tagline { display: block; font-size: clamp(1.1rem, 2.5vw, 1.6rem); margin-top: .5rem; font-weight: 400; -webkit-text-fill-color: var(--muted); background: none; letter-spacing: 2px; text-transform: uppercase; }
+  .hero .desc { font-size: clamp(.95rem, 1.5vw, 1.1rem); color: var(--muted); max-width: 520px; line-height: 1.7; margin: 1.5rem auto 0; }
+  .hero .hero-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-top: 2.5rem; }
+
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: .5rem;
+    padding: .85rem 2rem; border-radius: 8px;
+    font-size: 1rem; font-weight: 600; text-decoration: none;
+    background: linear-gradient(135deg, #0044AA, var(--accent));
+    color: #fff; border: none; cursor: pointer;
+    transition: box-shadow .3s, transform .2s;
+  }
+  .btn-primary:hover { box-shadow: var(--glow-accent); transform: translateY(-2px); }
+  .btn-secondary {
+    display: inline-flex; align-items: center; gap: .5rem;
+    padding: .85rem 2rem; border-radius: 8px;
+    font-size: 1rem; font-weight: 600; text-decoration: none;
+    background: transparent; color: var(--accent);
+    border: 1px solid rgba(0,45,106,.3); cursor: pointer;
+    transition: box-shadow .3s, transform .2s, background .2s;
+  }
+  .btn-secondary:hover { background: rgba(0,45,106,.06); box-shadow: var(--glow-accent); transform: translateY(-2px); }
+
+  section { padding: 5rem 0; position: relative; }
+  .section-header { text-align: center; margin-bottom: 3rem; }
+  .section-label { font-size: .7rem; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); margin-bottom: .5rem; }
+  section h2 { font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 700; line-height: 1.2; margin-bottom: .75rem; }
+  section h2 .highlight { background: linear-gradient(135deg, #002D6A, #004488); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  section .subtitle { color: var(--muted); max-width: 500px; font-size: .95rem; margin: 0 auto; }
+
+  .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+  .feature-card {
+    background: var(--surface); border: 1px solid rgba(0,45,106,.12);
+    border-radius: 10px; padding: 1.5rem;
+    transition: border-color .3s, box-shadow .3s, transform .3s;
+    position: relative; overflow: hidden;
+  }
+  .feature-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--accent), transparent); opacity: 0; transition: opacity .3s; }
+  .feature-card:hover { border-color: rgba(0,168,255,.2); box-shadow: 0 0 25px rgba(0,168,255,.05); transform: translateY(-2px); }
+  .feature-card:hover::before { opacity: 1; }
+  .feature-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: .75rem; font-size: 1.2rem; }
+  .feature-card h3 { font-size: 1rem; font-weight: 600; margin-bottom: .4rem; }
+  .feature-card p { color: var(--muted); font-size: .85rem; line-height: 1.5; }
+
+  .party-preview { background: var(--surface); border: 1px solid rgba(0,45,106,.12); border-radius: 10px; padding: 1.25rem; max-width: 480px; margin: 0 auto; }
+  .party-row { display: flex; align-items: center; gap: 1rem; padding: .65rem 0; border-bottom: 1px solid rgba(255,255,255,.03); }
+  .party-row:last-child { border-bottom: none; }
+  .party-game { font-weight: 600; font-size: .9rem; min-width: 95px; }
+  .party-rank { font-size: .7rem; padding: .1rem .5rem; border-radius: 4px; font-weight: 600; }
+  .party-rank.gold { background: rgba(255,184,54,.12); color: var(--warning); }
+  .party-rank.plat { background: rgba(0,168,255,.12); color: var(--accent); }
+  .party-rank.diamond { background: rgba(54,214,255,.12); color: var(--neon); }
+  .party-slots { color: var(--muted); font-size: .8rem; margin-left: auto; }
+  .party-slots b { color: var(--success); }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1.5rem; text-align: center; margin: 3rem 0; }
+  .stat h3 { font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, #002D6A, #004488); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .stat p { color: var(--muted); font-size: .85rem; margin-top: .2rem; }
+
+  .tech-grid { display: flex; flex-wrap: wrap; gap: .6rem; justify-content: center; }
+  .tech-chip { padding: .4rem 1rem; border-radius: 16px; border: 1px solid rgba(0,45,106,.15); font-size: .8rem; font-weight: 500; color: var(--muted); background: rgba(4,8,20,.5); transition: border-color .3s, color .3s; }
+  .tech-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+  .cta-section { text-align: center; padding: 6rem 0; position: relative; }
+  .cta-section::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, rgba(0,168,255,.04) 0%, transparent 70%); pointer-events: none; }
+  .cta-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-top: 2rem; }
+
+  footer { border-top: 1px solid rgba(0,45,106,.1); padding: 2rem 0; text-align: center; color: var(--muted); font-size: .8rem; }
+  footer a { color: var(--accent); text-decoration: none; }
+
+  .fade-up { opacity: 0; transform: translateY(25px); transition: opacity .7s ease, transform .7s ease; }
+  .fade-up.visible { opacity: 1; transform: translateY(0); }
+
+  @media (max-width: 768px) {
+    nav { padding: .6rem 1rem; } nav .nav-links { display: none; } .hero { padding-top: 5rem; }
+    .features-grid { grid-template-columns: 1fr; } .stats-grid { grid-template-columns: repeat(2, 1fr); } section { padding: 3rem 0; }
+  }
+  @media print { #bg-canvas { display: none; } body { background: #fff; color: #000; } }
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<nav>
+  <div class="logo">Squall</div>
+  <div class="nav-links">
+    <a href="#features">Возможности</a>
+    <a href="#tech">Технологии</a>
+    <a href="#features" class="nav-cta">Скачать</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-content">
+    <h1>Squall <span class="tagline">Connect. Play. Dominate.</span></h1>
+    <p class="desc">Голосовые каналы, видеозвонки, Party Finder и атмосферный штормовой интерфейс — геймерский мессенджер на Flutter, Supabase и LiveKit.</p>
+    <div class="hero-buttons">
+      <a href="https://github.com/kotvhapke/Squall/releases/download/v1.0.0/squall-windows.zip" class="btn-primary">Скачать для Windows</a>
+      <a href="#features" class="btn-secondary">Возможности</a>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="section-label">Возможности</div>
+      <h2>Всё для <span class="highlight">игрового сообщества</span></h2>
+      <p class="subtitle">Серверы, чаты, голосовые каналы, видеозвонки и поиск тиммейтов — в одном приложении.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card fade-up">
+        <div class="feature-icon" style="background:rgba(0,168,255,.08);color:var(--accent);">💬</div>
+        <h3>Текстовые каналы и DM</h3>
+        <p>Реалтайм-чат на Supabase Realtime. Серверные каналы, личные сообщения, аватарки и временные метки.</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon" style="background:rgba(54,214,255,.08);color:var(--neon);">🎤</div>
+        <h3>Голосовые каналы</h3>
+        <p>Voice-каналы на LiveKit. Push-to-talk, голосовая активация — заходи и общайся с командой.</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon" style="background:rgba(54,214,102,.08);color:var(--success);">📹</div>
+        <h3>Видеозвонки</h3>
+        <p>Аудио- и видеозвонки из личных сообщений. Веб-камера, микрофон, скриншеринг через WebRTC.</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon" style="background:rgba(255,184,54,.08);color:var(--warning);">🎮</div>
+        <h3>Party Finder</h3>
+        <p>Ищи напарников по Valorant, Apex, Dota 2, Fortnite, Elden Ring. Фильтр по рангу и платформе.</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon" style="background:rgba(0,168,255,.08);color:var(--accent);">🌐</div>
+        <h3>Серверы и сообщества</h3>
+        <p>Создавай серверы, приглашай друзей, открывай публичные сообщества по категориям.</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon" style="background:rgba(54,214,255,.08);color:var(--neon);">🌩️</div>
+        <h3>Атмосферный UI</h3>
+        <p>Тёмная тема, анимированный фон с туманом и молниями, неоновые акценты, стеклянные панели.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="section-label">Party Finder</div>
+      <h2>Найди <span class="highlight">тиммейтов</span></h2>
+      <p class="subtitle">Поиск напарников по игре, рангу и платформе.</p>
+    </div>
+    <div class="party-preview fade-up">
+      <div class="party-row"><span class="party-game">Valorant</span><span class="party-rank gold">Gold</span><span class="party-slots"><b>2/4</b></span></div>
+      <div class="party-row"><span class="party-game">Apex Legends</span><span class="party-rank plat">Platinum</span><span class="party-slots"><b>3/3</b></span></div>
+      <div class="party-row"><span class="party-game">Dota 2</span><span class="party-rank diamond">Diamond</span><span class="party-slots"><b>1/5</b></span></div>
+      <div class="party-row"><span class="party-game">Elden Ring</span><span class="party-rank gold">Gold</span><span class="party-slots"><b>2/2</b></span></div>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+  <div class="stats-grid fade-up">
+    <div class="stat"><h3>8</h3><p>экранов</p></div>
+    <div class="stat"><h3>Supabase</h3><p>auth + db + realtime</p></div>
+    <div class="stat"><h3>LiveKit</h3><p>voice & video</p></div>
+    <div class="stat"><h3>Windows</h3><p>native + web + mobile</p></div>
+  </div>
+</div>
+
+<section id="tech">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="section-label">Технологии</div>
+      <h2>Современный <span class="highlight">стек</span></h2>
+      <p class="subtitle">Flutter, Supabase, LiveKit — быстрый и надёжный мессенджер.</p>
+    </div>
+    <div class="tech-grid fade-up">
+      <span class="tech-chip">Flutter 3.x</span>
+      <span class="tech-chip">Dart</span>
+      <span class="tech-chip">Supabase Auth</span>
+      <span class="tech-chip">PostgreSQL</span>
+      <span class="tech-chip">Realtime</span>
+      <span class="tech-chip">LiveKit WebRTC</span>
+      <span class="tech-chip">Provider</span>
+      <span class="tech-chip">Windows (native)</span>
+      <span class="tech-chip">Web · Android · iOS</span>
+    </div>
+  </div>
+</section>
+
+<section id="cta" class="cta-section">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="section-label">Готов к буре?</div>
+      <h2>Присоединяйся к <span class="highlight">Squall</span></h2>
+      <p class="subtitle">Бесплатно. Windows, Web, Android, iOS, macOS, Linux.</p>
+      <div class="cta-buttons">
+        <a href="https://github.com/kotvhapke/Squall/releases/download/v1.0.0/squall-windows.zip" class="btn-primary">Скачать для Windows</a>
+        <a href="squall-windows.zip" class="btn-secondary">Исходный код (GitHub)</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer><div class="container">Squall · Flutter + Supabase + LiveKit · <a href="https://github.com">GitHub</a></div></footer>
+
+<script>
+const canvas = document.getElementById('bg-canvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+resize(); window.addEventListener('resize', resize);
+
+const fog = Array.from({ length: 20 }, () => ({ x: Math.random() * W, y: Math.random() * H, r: 100 + Math.random() * 250, dx: -0.04 - Math.random() * 0.08, dy: 0.01 + Math.random() * 0.03, o: 0.03 + Math.random() * 0.05 }));
+const rain = Array.from({ length: 350 }, () => ({ x: Math.random() * W, y: Math.random() * H, speed: 5 + Math.random() * 8, len: 15 + Math.random() * 25, o: 0.08 + Math.random() * 0.15 }));
+const arcs = Array.from({ length: 10 }, () => ({ x: Math.random() * W, y: 10 + Math.random() * H * 0.5, len: 100 + Math.random() * 200, life: 0, maxLife: 15 + Math.random() * 25, delay: Math.random() * 100 }));
+
+function drawFog() {
+  for (const p of fog) {
+    const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+    grad.addColorStop(0, `rgba(4,8,20,${p.o})`); grad.addColorStop(1, 'rgba(4,8,20,0)');
+    ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+    p.x += p.dx; p.y += p.dy;
+    if (p.x < -p.r) p.x = W + p.r; if (p.x > W + p.r) p.x = -p.r;
+    if (p.y < -p.r) p.y = H + p.r; if (p.y > H + p.r) p.y = -p.r;
+  }
+}
+function drawRain() {
+  for (const drop of rain) {
+    ctx.strokeStyle = `rgba(0,68,136,${drop.o})`; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(drop.x, drop.y); ctx.lineTo(drop.x - 1, drop.y + drop.len); ctx.stroke();
+    drop.y += drop.speed; drop.x -= 0.5;
+    if (drop.y > H) { drop.y = -drop.len; drop.x = Math.random() * W; }
+    if (drop.x < -10) drop.x = W + 10;
+  }
+}
+function drawArc(arc) {
+  const progress = Math.min(arc.life / arc.maxLife, 1);
+  if (progress <= 0) return;
+  const alpha = Math.sin(progress * Math.PI) * 0.55;
+  ctx.strokeStyle = `rgba(0,45,106,${alpha})`; ctx.lineWidth = 2;
+  ctx.shadowColor = 'rgba(0,45,106,0.5)'; ctx.shadowBlur = 25;
+  ctx.beginPath(); ctx.moveTo(arc.x, arc.y);
+  for (let i = 0; i <= 5; i++) ctx.lineTo(arc.x + (Math.random() - 0.5) * 10 * (1 - i/5), arc.y + arc.len * (i/5) * 0.5 + (Math.random() - 0.5) * 6 * (1 - i/5));
+  ctx.stroke(); ctx.shadowBlur = 0;
+}
+function animate() {
+  ctx.clearRect(0, 0, W, H); ctx.fillStyle = '#010104'; ctx.fillRect(0, 0, W, H);
+  drawFog(); drawRain();
+  for (const arc of arcs) {
+    if (arc.delay > 0) { arc.delay--; continue; }
+    if (arc.life < arc.maxLife) { arc.life++; drawArc(arc); }
+    else if (arc.life >= arc.maxLife + 20) { arc.x = Math.random() * W; arc.y = 20 + Math.random() * H * 0.4; arc.life = 0; arc.delay = 60 + Math.random() * 200; }
+  }
+  requestAnimationFrame(animate);
+}
+animate();
+
+const observer = new IntersectionObserver((entries) => {
+  for (const entry of entries) { if (entry.isIntersecting) entry.target.classList.add('visible'); }
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
