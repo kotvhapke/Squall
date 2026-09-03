@@ -14,8 +14,8 @@ set -euo pipefail
 
 # 1) Install a pinned Flutter SDK if not already available
 if ! command -v flutter >/dev/null 2>&1; then
-  echo "==> Installing Flutter $FLUTTER_VERSION (pinned)"
   FLUTTER_VERSION="${FLUTTER_VERSION:-3.44.9}"
+  echo "==> Installing Flutter $FLUTTER_VERSION (pinned)"
   FLUTTER_URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz"
   mkdir -p /opt/flutter
   curl -fsSL "$FLUTTER_URL" -o /tmp/flutter.tar.xz
