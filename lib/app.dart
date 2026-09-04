@@ -253,20 +253,21 @@ class _AppShellState extends State<AppShell> with TickerProviderStateMixin {
   }
 
   Widget _pageContent() {
+    final locale = context.select<SettingsProvider, Locale>((s) => s.locale);
     switch (_navIndex) {
       case 0: return _homeTab();
       case 1: return _serversView();
       case 2: return Column(children: [
         _topBar('Friends'.t(context), showBack: _navIndex != 0, onBack: () => setState(() => _navIndex = 0)),
-        Expanded(child: FriendsScreen()),
+        Expanded(child: FriendsScreen(key: ValueKey('friends-${locale.languageCode}'))),
       ]);
       case 3: return Column(children: [
         _topBar('Messages'.t(context), showBack: _navIndex != 0, onBack: () => setState(() => _navIndex = 0)),
-        Expanded(child: MessagesScreen()),
+        Expanded(child: MessagesScreen(key: ValueKey('messages-${locale.languageCode}'))),
       ]);
       case 4: return Column(children: [
         _topBar('Parties'.t(context), showBack: _navIndex != 0, onBack: () => setState(() => _navIndex = 0)),
-        Expanded(child: PartyFinderScreen()),
+        Expanded(child: PartyFinderScreen(key: ValueKey('parties-${locale.languageCode}'))),
       ]);
       case 5: return Column(children: [
         _topBar('Profile'.t(context), showBack: _navIndex != 0, onBack: () => setState(() => _navIndex = 0)),

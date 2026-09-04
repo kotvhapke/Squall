@@ -45,6 +45,20 @@ class _LoginScreenState extends State<LoginScreen> {
     ));
   }
 
+  void _signInAnonymously() async {
+    setState(() { _isLoading = true; _error = null; });
+    try {
+      await Supabase.instance.client.auth.signInAnonymously();
+      if (mounted) widget.onLogin();
+    } on AuthException catch (e) {
+      setState(() => _error = e.message);
+    } catch (e) {
+      setState(() => _error = 'Connection error.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -60,6 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: _LoginForm(
                   onSignIn: _signIn,
                   onNavigateRegister: _navigateToRegister,
+                  onGuestLogin: _signInAnonymously,
                   isLoading: _isLoading,
                   error: _error,
                 ),
@@ -164,12 +179,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
 class _LoginForm extends StatefulWidget {
   final void Function(String email, String password) onSignIn;
   final VoidCallback onNavigateRegister;
+  final VoidCallback? onGuestLogin;
   final bool isLoading;
   final String? error;
 
   const _LoginForm({
     required this.onSignIn,
     required this.onNavigateRegister,
+    this.onGuestLogin,
     required this.isLoading,
     this.error,
   });
@@ -230,6 +247,9 @@ class _LoginFormState extends State<_LoginForm> {
         ),
         const SizedBox(height: 16),
         SquallButton(label: 'Create Account', onPressed: widget.onNavigateRegister, primary: false),
+        const SizedBox(height: 10),
+        if (widget.onGuestLogin != null)
+          SquallButton(label: 'Continue as Guest', onPressed: widget.onGuestLogin, primary: false),
       ],
     );
   }
