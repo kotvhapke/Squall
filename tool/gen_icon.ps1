@@ -9,20 +9,23 @@ $g.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::AntiAliasGridFit
 # Dark background
 $g.Clear([System.Drawing.Color]::FromArgb(255, 5, 7, 12))
 
-# Big bold white S, centered, occupying ~90% of the canvas
+# Neon glow behind S - draw a blurred blue circle
+$glowBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(30, 0, 168, 255))
+$g.FillEllipse($glowBrush, 20, 20, 216, 216)
+$glowBrush2 = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(15, 54, 214, 255))
+$g.FillEllipse($glowBrush2, 40, 40, 176, 176)
+
+# Big bold white S
 $font = New-Object System.Drawing.Font("Segoe UI", 235, [System.Drawing.FontStyle]::Bold, [System.Drawing.GraphicsUnit]::Pixel)
 $brush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::White)
 $sf = New-Object System.Drawing.StringFormat
 $sf.Alignment = [System.Drawing.StringAlignment]::Center
 $sf.LineAlignment = [System.Drawing.StringAlignment]::Center
-
-# Use RectangleF (proper type for DrawString overload)
 $rectF = New-Object System.Drawing.RectangleF(-12, -12, ($size + 24), ($size + 24))
 $g.DrawString("S", $font, $brush, $rectF, $sf)
 
 $g.Dispose()
 
-# Ensure output dir
 $outDir = "C:\Users\Administrator\Documents\Squall\squall\assets\branding"
 if (-not (Test-Path $outDir)) { New-Item -ItemType Directory -Force -Path $outDir | Out-Null }
 
