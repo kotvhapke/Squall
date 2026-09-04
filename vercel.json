@@ -2,5 +2,20 @@
   "buildCommand": "bash vercel-build.sh",
   "outputDirectory": "build/web",
   "framework": null,
-  "trailingSlash": false
+  "trailingSlash": false,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
+      ]
+    },
+    {
+      "source": "/(.*).map",
+      "headers": [
+        { "key": "Content-Type", "value": "text/plain" },
+        { "key": "X-Robots-Tag", "value": "noindex" }
+      ]
+    }
+  ]
 }
