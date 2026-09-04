@@ -156,23 +156,26 @@
 
 <nav>
   <div class="logo">
-    <svg width="32" height="32" viewBox="0 0 100 100" style="vertical-align:middle;margin-right:8px">
+    <svg width="36" height="36" viewBox="0 0 100 100" style="vertical-align:middle;margin-right:8px">
       <defs>
-        <filter id="nglow">
-          <feGaussianBlur stdDeviation="2.5" result="blur"/>
-          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        <filter id="nglow" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="4" result="blur"/>
+          <feFlood flood-color="#00A8FF" result="color"/>
+          <feComposite in="color" in2="blur" operator="in" result="glow"/>
+          <feMerge>
+            <feMergeNode in="glow"/>
+            <feMergeNode in="glow"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
         </filter>
       </defs>
       <!-- Rounded dark square background -->
-      <rect x="0" y="0" width="100" height="100" rx="12" fill="#0A0F1A"/>
-      <!-- Geometric S: three rounded bars -->
+      <rect x="2" y="2" width="96" height="96" rx="22" fill="#05070C" stroke="#00A8FF" stroke-opacity="0.18" stroke-width="1.5"/>
+      <!-- Geometric S: 3 segments + 2 verticals, in one continuous rounded stroke -->
       <g filter="url(#nglow)">
-        <!-- Top bar (right side) -->
-        <rect x="32" y="12" width="56" height="22" rx="6" fill="#00A8FF"/>
-        <!-- Middle bridge (left side) -->
-        <rect x="16" y="39" width="46" height="22" rx="6" fill="#00A8FF"/>
-        <!-- Bottom bar (right side) -->
-        <rect x="32" y="66" width="56" height="22" rx="6" fill="#00A8FF"/>
+        <path d="M 33 25 H 70 V 47 H 30 V 69 H 65"
+              fill="none" stroke="#00A8FF" stroke-width="22"
+              stroke-linecap="round" stroke-linejoin="round"/>
       </g>
     </svg>
     Squall
