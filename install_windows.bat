@@ -1,49 +1,47 @@
 @echo off
-title Squall — Installer
+title Squall — Установка
 setlocal enabledelayedexpansion
 
-:: ============================================================
-:: Squall — Windows Auto-Installer
-:: Распаковывает Squall и создаёт ярлык на рабочем столе.
-:: Запускать из папки, где лежит squall.exe и все DLL.
-:: Если запущен из ZIP — сначала распакуйте вручную.
-:: ============================================================
+:: Squall Auto-Installer
+:: Запускается из ZIP. Копирует файлы, создаёт ярлык на рабочем столе.
+:: Требует права администратора для Program Files.
 
 cd /d "%~dp0"
 
-:: Проверяем, что squall.exe есть рядом
+:: 1. Проверяем, что рядом есть squall.exe
 if not exist "squall.exe" (
-    echo [ERROR] squall.exe not found in current folder.
-    echo         Make sure you extracted the ZIP first.
+    echo [ERROR] squall.exe not found.
+    echo Убедитесь, что вы распаковали архив полностью.
     pause
     exit /b 1
 )
 
-:: Создаём папку в Program Files (требует админских прав — если нет, используем AppData)
+:: 2. Определяем папку установки
 set "INSTALL_DIR=%LOCALAPPDATA%\Squall"
-if exist "%PROGRAMFILES%\Squall" set "INSTALL_DIR=%PROGRAMFILES%\Squall"
 
-:: Если не в Program Files — копируем в AppData
-if not "%INSTALL_DIR%"=="%PROGRAMFILES%\Squall" (
-    echo Installing to: %INSTALL_DIR%
-    if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
-    copy /y "%~dp0squall.exe" "%INSTALL_DIR%\squall.exe" >nul
-    copy /y "%~dp0*.dll" "%INSTALL_DIR%\" >nul 2>&1
-    if exist "%~dp0data" xcopy /e /i /q /y "%~dp0data" "%INSTALL_DIR%\data\" >nul
+:: 3. Копируем файлы
+echo Установка в %INSTALL_DIR% ...
+if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
+copy /y "%~dp0squall.exe" "%INSTALL_DIR%\squall.exe" >nul
+if exist "%~dp0*.dll" copy /y "%~dp0*.dll" "%INSTALL_DIR%\" >nul 2>&1
+if exist "%~dp0data" (
+    if exist "%INSTALL_DIR%\data" rmdir /s /q "%INSTALL_DIR%\data"
+    xcopy /e /i /q /y "%~dp0data" "%INSTALL_DIR%\data\" >nul
 )
 
-:: Создаём ярлык на рабочем столе
+:: 4. Создаём ярлык на рабочем столе
 set "SHORTCUT=%USERPROFILE%\Desktop\Squall.lnk"
 if exist "%SHORTCUT%" del "%SHORTCUT%"
 
-:: PowerShell скрипт для создания ярлыка
 powershell -NoProfile -Command ^
-"$s = New-Object -ComObject WScript.Shell; $l = $s.CreateShortcut('%SHORTCUT%'); $l.TargetPath = '%INSTALL_DIR%\squall.exe'; $l.WorkingDirectory = '%INSTALL_DIR%'; $l.IconLocation = '%INSTALL_DIR%\squall.exe,0'; $l.Save()"
+"$s = New-Object -ComObject WScript.Shell; $l = $s.CreateShortcut('%SHORTCUT%'); $l.TargetPath = '%INSTALL_DIR%\squall.exe'; $l.WorkingDirectory = '%INSTALL_DIR%'; $l.IconLocation = '%INSTALL_DIR%\squall.exe,0'; $l.Save()" >nul
 
+:: 5. Запускаем приложение
+start "" "%INSTALL_DIR%\squall.exe"
+
+:: 6. Готово
 echo.
-echo === Squall installed successfully! ===
-echo Shortcut created on your desktop.
+echo === Squall установлен! ===
+echo Ярлык на рабочем столе: %SHORTCUT%
 echo.
-echo To uninstall: delete "%INSTALL_DIR%" and the desktop shortcut.
-echo.
-pause
+timeout /t 3 /nobreak >nul

@@ -12,6 +12,9 @@ void main() {
     pngs[s] = Uint8List.fromList(encodePng(resized));
   }
 
+  // Also save 256 as branding png
+  File('assets/branding/squall-icon-256.png').writeAsBytesSync(pngs[256]!);
+
   final ico = encodeIco(pngs);
   File('windows/runner/resources/app_icon.ico').writeAsBytesSync(ico);
   print('OK: ${ico.length} bytes, ${sizes.length} sizes');

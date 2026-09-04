@@ -18,6 +18,7 @@ void main() {
   final ico = encodeIco(pngs);
   File('windows/runner/resources/app_icon.ico').writeAsBytesSync(ico);
   File('assets/branding/squall-icon-256.png').writeAsBytesSync(pngs[256]!);
+  File('assets/branding/squall-icon-user.png').writeAsBytesSync(pngs[256]!);
   print('OK: ${ico.length} bytes, ${sizes.length} sizes');
 }
 
@@ -25,87 +26,77 @@ Uint8List generatePng(int size) {
   final s = size;
   final pixels = Uint8List(s * s * 4);
   final cx = s / 2, cy = s / 2;
-  final cornerR = s * 0.10;
+  final pad = s * 0.17; // left/right padding
+  final topPad = s * 0.17;
+  final botPad = s * 0.17;
+  final thick = s * 0.22; // bar thickness
+  final r = s * 0.06; // corner radius
 
   for (int y = 0; y < s; y++) {
     for (int x = 0; x < s; x++) {
       final i = (y * s + x) * 4;
 
-      // Rounded square mask (like a launcher icon)
-      bool inside = true;
-      if (x < cornerR && y < cornerR) inside = (x - cornerR).abs() + (y - cornerR).abs() <= cornerR;
-      else if (x >= s - cornerR && y < cornerR) inside = (x - (s - 1 - cornerR)).abs() + (y - cornerR).abs() <= cornerR;
-      else if (x < cornerR && y >= s - cornerR) inside = (x - cornerR).abs() + (y - (s - 1 - cornerR)).abs() <= cornerR;
-      else if (x >= s - cornerR && y >= s - cornerR) {
-        inside = (x - (s - 1 - cornerR)).abs() + (y - (s - 1 - cornerR)).abs() <= cornerR;
-      }
-
-      if (!inside) {
-        pixels[i] = 0; pixels[i+1] = 0; pixels[i+2] = 0; pixels[i+3] = 0;
-        continue;
-      }
-
-      // Solid near-black background (as in the reference logo)
+      // Dark background (slightly rounded square)
       pixels[i] = 5; pixels[i+1] = 7; pixels[i+2] = 12; pixels[i+3] = 255;
 
-      // Subtle electric-blue ring on the edge (Squall accent), thin
-      final edge = s * 0.03;
-      if (x < edge || y < edge || x >= s - edge || y >= s - edge) {
-        // keep dark
-      }
+      // Check if pixel is inside the white S
+      // S consists of 3 rounded horizontal bars:
+      // Top bar: top-right going left
+      // Middle bar: bridge from right to left
+      // Bottom bar: bottom-left going right
 
-      // Draw the white rounded-rect "S"
-      drawS(pixels, s, x, y, cx, cy);
+      bool inside = false;
+
+      // Top bar: top area, from center to right edge
+      if (_insideBar(x, y, cx, topPad, cx + s/2 - pad, topPad + thick, r)) inside = true;
+
+      // Middle bar: middle area, from left to right (bridge, shifted left)
+      if (_insideBar(x, y, pad, cy - thick/2, cx + s/2 - pad, cy + thick/2, r)) inside = true;
+
+      // Bottom bar: bottom area, from left to center
+      if (_insideBar(x, y, pad, s - botPad - thick, cx, s - botPad, r)) inside = true;
+
+      // Vertical connector: mid-left area connecting middle and bottom bars
+      if (x > pad && x < pad + thick && y > cy - thick/2 && y < s - botPad) inside = true;
+
+      // Small vertical stub on top-right connecting top and middle bars
+      if (x > cx + s/2 - pad - thick && x < cx + s/2 - pad && y > topPad + thick && y < cy + thick/2) inside = true;
+
+      if (inside) {
+        // White letter with slight anti-alias on edges
+        int alpha = 255;
+        // Simple edge detection for anti-alias
+        if (x > 0 && x < s-1 && y > 0 && y < s-1) {
+          int count = 0;
+          for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+              if (dx == 0 && dy == 0) continue;
+              final ni = ((y + dy) * s + (x + dx)) * 4;
+              if (pixels[ni + 3] == 0 || pixels[ni] == 5) count++;
+            }
+          }
+          if (count > 5) alpha = 180;
+          if (count > 7) alpha = 80;
+        }
+        setPx(pixels, s, x, y, 255, 255, 255, alpha);
+      }
     }
   }
   return pngEncode(pixels, s, s);
 }
 
-void drawS(Uint8List p, int s, int x, int y, double cx, double cy) {
-  final pad = s * 0.14;      // top/bottom padding
-  final w = s * 0.26;        // bar height (thickness)
-  final r = s * 0.05;        // corner radius
-  final half = s / 2;
-
-  // Three bars forming the geometric "S":
-  //   top bar    -> right half
-  //   middle bar -> left-ish bridge
-  //   bottom bar -> left half
-  final bars = <List<double>>[
-    // top: from center-left to right
-    [half - w * 0.35, pad, w * 1.55, w],
-    // middle bridge
-    [half - w * 0.5, half - w / 2, w * 1.15, w],
-    // bottom: from left to center-right
-    [pad, s - pad - w, w * 1.55, w],
-  ];
-
-  for (final bar in bars) {
-    final bx = bar[0], by = bar[1], bw = bar[2], bh = bar[3];
-    if (insideRRect(x, y, bx, by, bw, bh, r)) {
-      setPx(p, s, x, y, 255, 255, 255, 255);
-    }
-  }
-
-  // Thin electric-blue accent line under the top bar (subtle Squall touch)
-  if (insideRRect(x, y, half - w * 0.35, pad + w - s * 0.008, w * 1.55, s * 0.012, s * 0.006)) {
-    setPx(p, s, x, y, 0, 168, 255, 120);
-  }
-}
-
-bool insideRRect(int px, int py, double rx, double ry, double rw, double rh, double rr) {
-  if (px < rx || px > rx + rw || py < ry || py > ry + rh) return false;
-  final dx = min((px - rx).abs(), (px - (rx + rw)).abs()).toDouble();
-  final dy = min((py - ry).abs(), (py - (ry + rh)).abs()).toDouble();
-  if (dx <= rr && dy <= rr) {
-    return dx * dx + dy * dy <= rr * rr;
-  }
+bool _insideBar(int px, int py, double x1, double y1, double x2, double y2, double r) {
+  if (px < x1 - r || px > x2 + r || py < y1 - r || py > y2 + r) return false;
+  // Check corners
+  if (px < x1 + r && py < y1 + r) return (px - (x1 + r)) * (px - (x1 + r)) + (py - (y1 + r)) * (py - (y1 + r)) <= r * r;
+  if (px > x2 - r && py < y1 + r) return (px - (x2 - r)) * (px - (x2 - r)) + (py - (y1 + r)) * (py - (y1 + r)) <= r * r;
+  if (px < x1 + r && py > y2 - r) return (px - (x1 + r)) * (px - (x1 + r)) + (py - (y2 - r)) * (py - (y2 - r)) <= r * r;
+  if (px > x2 - r && py > y2 - r) return (px - (x2 - r)) * (px - (x2 - r)) + (py - (y2 - r)) * (py - (y2 - r)) <= r * r;
   return true;
 }
 
 void setPx(Uint8List p, int s, int x, int y, int r, int g, int b, int a) {
   final i = (y * s + x) * 4;
-  if (p[i+3] == 0) return;
   final alpha = a / 255.0;
   p[i] = (p[i] * (1 - alpha) + r * alpha).round().clamp(0, 255);
   p[i+1] = (p[i+1] * (1 - alpha) + g * alpha).round().clamp(0, 255);
