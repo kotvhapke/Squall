@@ -27,14 +27,19 @@ if ! command -v flutter >/dev/null 2>&1; then
   export PATH="$FLUTTER_HOME/bin:$PATH"
 fi
 
-# 2) Disable analytics/flutter welcome prompts so the build never hangs
+# 2) Git safety: flutter binary is a git repo, Vercel runs as root
+git config --global --add safe.directory "$(dirname $(which flutter))/.." 2>/dev/null || true
+git config --global --add safe.directory /vercel/flutter 2>/dev/null || true
+git config --global --add safe.directory "$HOME/flutter" 2>/dev/null || true
+
+# 3) Disable analytics/welcome prompts
 flutter config --no-analytics >/dev/null 2>&1 || true
 
-# 3) Resolve dependencies (uses committed pubspec.lock)
+# 4) Resolve dependencies (uses committed pubspec.lock)
 echo "==> Running flutter pub get"
 flutter pub get
 
-# 4) Build Flutter web with public env values
+# 5) Build Flutter web with public env values from Vercel vars
 echo "==> Building Flutter web"
 flutter build web \
   --release \
@@ -42,7 +47,7 @@ flutter build web \
   --dart-define=SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-}" \
   --dart-define=LIVEKIT_URL="${LIVEKIT_URL:-wss://localhost:7880}"
 
-# 5) Wrap the Flutter app into build/web/app/
+# 6) Wrap the Flutter app into build/web/app/
 echo "==> Wrapping Flutter app into build/web/app"
 rm -rf build/web/app
 mkdir -p build/web/app
@@ -53,7 +58,7 @@ for entry in build/web/*; do
   fi
 done
 
-# 6) Overwrite root index.html with the landing page
+# 7) Overwrite root index.html with the landing page
 echo "==> Replacing root index.html with landing page"
 cp squall-landing.html build/web/index.html
 
