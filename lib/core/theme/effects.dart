@@ -73,7 +73,7 @@ class _AnimatedLogoState extends State<_AnimatedLogo> with TickerProviderStateMi
     final flick = widget.reduced ? 0.5 : _flicker.value + _tapPulse.value * 0.3;
     Widget logo = CustomPaint(
       size: Size(widget.size, widget.size),
-      painter: _SquallLetterPainter(glowIntensity: glow.clamp(0.0, 1.5), flicker: flick.clamp(0.0, 1.0)),
+      painter: _SquallSPainter(glowIntensity: glow.clamp(0.0, 1.5), flicker: flick.clamp(0.0, 1.0)),
     );
     if (widget.tappable) {
       logo = GestureDetector(onTap: _onTap, child: logo);
@@ -82,16 +82,19 @@ class _AnimatedLogoState extends State<_AnimatedLogo> with TickerProviderStateMi
   }
 }
 
-class _SquallLetterPainter extends CustomPainter {
+class _SquallSPainter extends CustomPainter {
   final double glowIntensity;
   final double flicker;
 
-  _SquallLetterPainter({this.glowIntensity = 0.85, this.flicker = 0.5});
+  _SquallSPainter({this.glowIntensity = 0.85, this.flicker = 0.5});
 
   @override
   void paint(Canvas canvas, Size size) {
     final s = size.width;
     final half = s / 2;
+    final pad = s * 0.12;
+    final w = s * 0.28;      // bar width
+    final r = s * 0.08;      // corner radius
 
     // Soft ambient glow
     final ambient = Paint()
@@ -99,56 +102,49 @@ class _SquallLetterPainter extends CustomPainter {
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
     canvas.drawCircle(Offset(half, half), s * 0.42, ambient);
 
-    // Outer glow stroke (thick, blurred)
+    // Glow paint
     final glowPaint = Paint()
       ..color = AppColors.electricBlue.withValues(alpha: 0.30 * glowIntensity)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = s * 0.15
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+      ..style = PaintingStyle.fill
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
 
-    // Main neon stroke
-    final mainPaint = Paint()
+    // Main fill paint
+    final fillPaint = Paint()
       ..color = AppColors.coldNeon.withValues(alpha: 0.90 + 0.10 * flicker)
+      ..style = PaintingStyle.fill;
+
+    // Neon stroke paint
+    final strokePaint = Paint()
+      ..color = AppColors.coldNeon.withValues(alpha: 0.95 + 0.05 * flicker)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = s * 0.085
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
+      ..strokeWidth = s * 0.015
+      ..strokeCap = StrokeCap.round;
 
-    // S letter matching the logo shape
-    // The logo S has: thick top-left lobe, thin waist, thick bottom-right lobe
-    final path = Path();
-    final cx = half;
-    final cy = half;
-    final r = s * 0.36;
+    // Build the S shape: three rounded rectangles
+    // Top bar (horizontal, top-right)
+    final topBar = RRect.fromRectAndRadius(
+      Rect.fromLTWH(half - w * 0.3, pad, w * 1.3, w),
+      Radius.circular(r),
+    );
+    // Middle bar (horizontal, connecting)
+    final midBar = RRect.fromRectAndRadius(
+      Rect.fromLTWH(half - w * 0.3, half - w / 2, w * 0.9, w),
+      Radius.circular(r),
+    );
+    // Bottom bar (horizontal, bottom-left)
+    final botBar = RRect.fromRectAndRadius(
+      Rect.fromLTWH(half - w * 0.6, s - pad - w, w * 1.3, w),
+      Radius.circular(r),
+    );
 
-    // Start at top-left — thick lobe
-    path.moveTo(cx - r * 0.85, cy - r * 0.15);
-
-    // Upper curve — thick left lobe
-    path.quadraticBezierTo(cx - r * 0.80, cy - r * 0.70, cx - r * 0.25, cy - r * 0.70);
-    path.quadraticBezierTo(cx + r * 0.20, cy - r * 0.70, cx + r * 0.70, cy - r * 0.45);
-
-    // Transition to waist — thin middle
-    path.quadraticBezierTo(cx + r * 0.85, cy - r * 0.30, cx + r * 0.60, cy - r * 0.15);
-    path.quadraticBezierTo(cx + r * 0.30, cy + r * 0.05, cx - r * 0.05, cy + r * 0.05);
-
-    // Lower curve — thick right lobe going down
-    path.quadraticBezierTo(cx - r * 0.50, cy + r * 0.05, cx - r * 0.75, cy + r * 0.25);
-    path.quadraticBezierTo(cx - r * 0.90, cy + r * 0.40, cx - r * 0.65, cy + r * 0.60);
-
-    // Bottom curve — curving right
-    path.quadraticBezierTo(cx - r * 0.40, cy + r * 0.75, cx - r * 0.05, cy + r * 0.70);
-    path.quadraticBezierTo(cx + r * 0.35, cy + r * 0.65, cx + r * 0.75, cy + r * 0.50);
-
-    // End tail
-    path.quadraticBezierTo(cx + r * 0.90, cy + r * 0.40, cx + r * 0.85, cy + r * 0.25);
-
-    canvas.drawPath(path, glowPaint);
-    canvas.drawPath(path, mainPaint);
+    // Draw with glow
+    for (final bar in [topBar, midBar, botBar]) {
+      canvas.drawRRect(bar, glowPaint);
+      canvas.drawRRect(bar, fillPaint);
+      canvas.drawRRect(bar, strokePaint);
+    }
   }
 
   @override
-  bool shouldRepaint(_SquallLetterPainter old) => old.glowIntensity != glowIntensity || old.flicker != flicker;
+  bool shouldRepaint(_SquallSPainter old) => old.glowIntensity != glowIntensity || old.flicker != flicker;
 }

@@ -154,7 +154,28 @@
 <canvas id="bg-canvas"></canvas>
 
 <nav>
-  <div class="logo">Squall</div>
+  <div class="logo">
+    <svg width="32" height="32" viewBox="0 0 100 100" style="vertical-align:middle;margin-right:8px">
+      <defs>
+        <filter id="nglow">
+          <feGaussianBlur stdDeviation="2.5" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <!-- Rounded dark square background -->
+      <rect x="0" y="0" width="100" height="100" rx="12" fill="#0A0F1A"/>
+      <!-- Geometric S: three rounded bars -->
+      <g filter="url(#nglow)">
+        <!-- Top bar (right side) -->
+        <rect x="32" y="12" width="56" height="22" rx="6" fill="#00A8FF"/>
+        <!-- Middle bridge (left side) -->
+        <rect x="16" y="39" width="46" height="22" rx="6" fill="#00A8FF"/>
+        <!-- Bottom bar (right side) -->
+        <rect x="32" y="66" width="56" height="22" rx="6" fill="#00A8FF"/>
+      </g>
+    </svg>
+    Squall
+  </div>
   <div class="nav-links">
     <a href="#features">Возможности</a>
     <a href="#tech">Технологии</a>

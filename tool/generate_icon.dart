@@ -24,77 +24,83 @@ void main() {
 Uint8List generatePng(int size) {
   final s = size;
   final pixels = Uint8List(s * s * 4);
+  final cx = s / 2, cy = s / 2;
+  final cornerR = s * 0.10;
+
   for (int y = 0; y < s; y++) {
     for (int x = 0; x < s; x++) {
       final i = (y * s + x) * 4;
-      final cx = s / 2, cy = s / 2;
-      final cornerR = s * 0.08;
+
+      // Rounded square mask (like a launcher icon)
       bool inside = true;
       if (x < cornerR && y < cornerR) inside = (x - cornerR).abs() + (y - cornerR).abs() <= cornerR;
       else if (x >= s - cornerR && y < cornerR) inside = (x - (s - 1 - cornerR)).abs() + (y - cornerR).abs() <= cornerR;
       else if (x < cornerR && y >= s - cornerR) inside = (x - cornerR).abs() + (y - (s - 1 - cornerR)).abs() <= cornerR;
-      else if (x >= s - cornerR && y >= s - cornerR) inside = (x - (s - 1 - cornerR)).abs() + (y - (s - 1 - cornerR)).abs() <= cornerR;
+      else if (x >= s - cornerR && y >= s - cornerR) {
+        inside = (x - (s - 1 - cornerR)).abs() + (y - (s - 1 - cornerR)).abs() <= cornerR;
+      }
 
-      if (!inside) { pixels[i] = 0; pixels[i+1] = 0; pixels[i+2] = 0; pixels[i+3] = 0; continue; }
+      if (!inside) {
+        pixels[i] = 0; pixels[i+1] = 0; pixels[i+2] = 0; pixels[i+3] = 0;
+        continue;
+      }
 
-      // Dark bg
-      pixels[i] = 15; pixels[i+1] = 23; pixels[i+2] = 41; pixels[i+3] = 255;
+      // Solid near-black background (as in the reference logo)
+      pixels[i] = 5; pixels[i+1] = 7; pixels[i+2] = 12; pixels[i+3] = 255;
 
-      final r = s * 0.38;
-      drawS(pixels, s, x, y, cx, cy, r);
-      drawBolt(pixels, s, x, y, cx, cy, r);
-      if (s > 24) drawRain(pixels, s, x, y, cx, cy, r);
+      // Subtle electric-blue ring on the edge (Squall accent), thin
+      final edge = s * 0.03;
+      if (x < edge || y < edge || x >= s - edge || y >= s - edge) {
+        // keep dark
+      }
+
+      // Draw the white rounded-rect "S"
+      drawS(pixels, s, x, y, cx, cy);
     }
   }
   return pngEncode(pixels, s, s);
 }
 
-void drawS(Uint8List p, int s, int x, int y, double cx, double cy, double r) {
-  final pts = [
-    [cx - r, cy - r * 0.3], [cx - r * 0.1, cy - r * 0.7],
-    [cx + r * 0.5, cy - r * 0.2], [cx + r * 0.2, cy + r * 0.1],
-    [cx - r * 0.3, cy + r * 0.1], [cx - r * 0.5, cy + r * 0.4],
-    [cx - r * 0.1, cy + r * 0.7], [cx + r * 0.5, cy + r * 0.4],
+void drawS(Uint8List p, int s, int x, int y, double cx, double cy) {
+  final pad = s * 0.14;      // top/bottom padding
+  final w = s * 0.26;        // bar height (thickness)
+  final r = s * 0.05;        // corner radius
+  final half = s / 2;
+
+  // Three bars forming the geometric "S":
+  //   top bar    -> right half
+  //   middle bar -> left-ish bridge
+  //   bottom bar -> left half
+  final bars = <List<double>>[
+    // top: from center-left to right
+    [half - w * 0.35, pad, w * 1.55, w],
+    // middle bridge
+    [half - w * 0.5, half - w / 2, w * 1.15, w],
+    // bottom: from left to center-right
+    [pad, s - pad - w, w * 1.55, w],
   ];
-  final sw = (s / 7).round().clamp(1, 6);
-  for (int i = 0; i < pts.length - 1; i++) {
-    if (nearLine(x, y, pts[i][0], pts[i][1], pts[i+1][0], pts[i+1][1], sw)) {
-      setPx(p, s, x, y, 0x56, 0xCC, 0xF2, 255); return;
+
+  for (final bar in bars) {
+    final bx = bar[0], by = bar[1], bw = bar[2], bh = bar[3];
+    if (insideRRect(x, y, bx, by, bw, bh, r)) {
+      setPx(p, s, x, y, 255, 255, 255, 255);
     }
+  }
+
+  // Thin electric-blue accent line under the top bar (subtle Squall touch)
+  if (insideRRect(x, y, half - w * 0.35, pad + w - s * 0.008, w * 1.55, s * 0.012, s * 0.006)) {
+    setPx(p, s, x, y, 0, 168, 255, 120);
   }
 }
 
-void drawBolt(Uint8List p, int s, int x, int y, double cx, double cy, double r) {
-  final pts = [
-    [cx + r * 0.2, cy - r * 0.5], [cx - r * 0.1, cy - r * 0.05],
-    [cx + r * 0.2, cy + r * 0.05], [cx - r * 0.15, cy + r * 0.4],
-    [cx - r * 0.05, cy + r * 0.5],
-  ];
-  final sw = (s / 10).round().clamp(1, 4);
-  for (int i = 0; i < pts.length - 1; i++) {
-    if (nearLine(x, y, pts[i][0], pts[i][1], pts[i+1][0], pts[i+1][1], sw)) {
-      setPx(p, s, x, y, 0xBB, 0x86, 0xFC, 255); return;
-    }
+bool insideRRect(int px, int py, double rx, double ry, double rw, double rh, double rr) {
+  if (px < rx || px > rx + rw || py < ry || py > ry + rh) return false;
+  final dx = min((px - rx).abs(), (px - (rx + rw)).abs()).toDouble();
+  final dy = min((py - ry).abs(), (py - (ry + rh)).abs()).toDouble();
+  if (dx <= rr && dy <= rr) {
+    return dx * dx + dy * dy <= rr * rr;
   }
-}
-
-void drawRain(Uint8List p, int s, int x, int y, double cx, double cy, double r) {
-  final rng = Random(42);
-  for (int i = 0; i < 6; i++) {
-    final rx = cx - r + rng.nextDouble() * r * 2;
-    final ry = cy - r + rng.nextDouble() * r * 2;
-    final len = 2 + rng.nextDouble() * s * 0.10;
-    if (nearLine(x, y, rx, ry, rx + 1, ry + len, 1)) {
-      setPx(p, s, x, y, 0x56, 0xCC, 0xF2, 120); return;
-    }
-  }
-}
-
-bool nearLine(int px, int py, double x1, double y1, double x2, double y2, int sw) {
-  final dx = x2 - x1, dy = y2 - y1;
-  final len = sqrt(dx * dx + dy * dy);
-  if (len < 0.5) return false;
-  return ((py - y1) * dx - (px - x1) * dy).abs() / len <= sw;
+  return true;
 }
 
 void setPx(Uint8List p, int s, int x, int y, int r, int g, int b, int a) {
@@ -107,7 +113,7 @@ void setPx(Uint8List p, int s, int x, int y, int r, int g, int b, int a) {
   p[i+3] = 255;
 }
 
-// PNG encoder
+// ---------- PNG encoder ----------
 Uint8List pngEncode(Uint8List pixels, int w, int h) {
   final out = BytesBuilder();
   out.add([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);

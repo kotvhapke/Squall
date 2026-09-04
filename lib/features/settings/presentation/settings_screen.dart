@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:squall/core/theme/app_colors.dart';
 import 'package:squall/core/settings/settings_provider.dart';
 import 'package:squall/core/translations.dart';
+import 'package:squall/shared/widgets/squall_back_button.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -38,7 +39,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 24),
                 _section('Appearance'.t(context)),
                 const SizedBox(height: 12),
-                _toggleTile('Reduced Effects'.t(context), reduced, (v) => context.read<SettingsProvider>().setReducedEffects(v)),
+                _toggleTile('Reduced Effects'.t(context), reduced, (v) => s.setReducedEffects(v)),
                 _toggleTile('Show Online Only'.t(context), context.select<SettingsProvider, bool>((s) => s.showOnlineOnly), (v) => s.setShowOnlineOnly(v)),
                 const SizedBox(height: 16),
                 _section('Language'.t(context)),
@@ -53,6 +54,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 12),
                 _actionTile(Icons.logout, 'Sign Out'.t(context), AppColors.danger, onTap: () async {
                   await Supabase.instance.client.auth.signOut();
+                  if (context.mounted) {
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  }
                 }),
               ],
             ),
@@ -64,12 +68,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _header() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
       ),
       child: Row(
         children: [
+          SquallBackButton(onPressed: () => Navigator.pop(context)),
+          const SizedBox(width: 4),
           Icon(Icons.settings_outlined, size: 22, color: AppColors.electricBlue),
           const SizedBox(width: 10),
           Text('Settings'.t(context), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),

@@ -59,30 +59,36 @@ class SettingsProvider extends ChangeNotifier {
   void setMasterVolume(double value) {
     _masterVolume = value;
     _store.set('squall_volume', value.toString());
+    notifyListeners();
   }
 
   void setMicSensitivity(double value) {
     _micSensitivity = value;
     _store.set('squall_mic', value.toString());
+    notifyListeners();
   }
 
   void setPushToTalk(bool value) {
     _pushToTalk = value;
     _store.set('squall_ptt', value.toString());
+    notifyListeners();
   }
 
   void setShowOnlineOnly(bool value) {
     _showOnlineOnly = value;
     _store.set('squall_online', value.toString());
+    notifyListeners();
   }
 
   void setSoundOnNotification(bool value) {
     _soundOnNotification = value;
     _store.set('squall_sound', value.toString());
+    notifyListeners();
   }
 
   void setEnableVoiceActivity(bool value) {
     _enableVoiceActivity = value;
     _store.set('squall_vad', value.toString());
+    notifyListeners();
   }
 }
