@@ -17,7 +17,6 @@ import 'package:squall/features/dms/presentation/messages_screen.dart';
 import 'package:squall/features/friends/presentation/friends_screen.dart';
 import 'package:squall/features/party_finder/presentation/party_finder_screen.dart';
 import 'package:squall/features/profile/presentation/profile_screen.dart';
-import 'package:squall/core/translations.dart';
 
 class SquallApp extends StatelessWidget {
   const SquallApp({super.key});
@@ -26,13 +25,13 @@ class SquallApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => SettingsProvider(),
-      child: Selector<SettingsProvider, Locale>(
-        selector: (_, s) => s.locale,
-        builder: (context, locale, _) => MaterialApp(
+      child: Consumer<SettingsProvider>(
+        builder: (context, settings, _) => MaterialApp(
+          key: ValueKey('app-${settings.locale.languageCode}'),
           title: 'Squall',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.darkTheme,
-          locale: locale,
+          locale: settings.locale,
           supportedLocales: const [Locale('en'), Locale('ru')],
           home: const _AuthGate(),
         ),
@@ -43,7 +42,6 @@ class SquallApp extends StatelessWidget {
 
 class _AuthGate extends StatefulWidget {
   const _AuthGate();
-
   @override
   State<_AuthGate> createState() => _AuthGateState();
 }
@@ -92,13 +90,27 @@ class _AppShellState extends State<AppShell> with TickerProviderStateMixin {
   Map<String, dynamic>? _selectedChannel;
   List<Map<String, dynamic>> _channels = [];
 
-  List<_N> _navItems(BuildContext context) => [
-    _N(0, 'Home'.t(context), Icons.home_outlined),
-    _N(1, 'Servers'.t(context), Icons.dns_outlined),
-    _N(2, 'Friends'.t(context), Icons.people_outline),
-    _N(3, 'Messages'.t(context), Icons.chat_outlined),
-    _N(4, 'Parties'.t(context), Icons.groups_outlined),
-    _N(5, 'Profile'.t(context), Icons.person_outline),
+  String _t(String en) {
+    final locale = context.read<SettingsProvider>().locale.languageCode;
+    if (locale != 'ru') return en;
+    return _translations[en] ?? en;
+  }
+
+  static const _translations = <String, String>{
+    'Home': 'Главная', 'Servers': 'Серверы', 'Friends': 'Друзья',
+    'Messages': 'Сообщения', 'Parties': 'Пати', 'Profile': 'Профиль',
+    'Your Servers': 'Ваши серверы', 'Welcome to Squall': 'Добро пожаловать в Squall',
+    'Use the navigation on the left': 'Используйте навигацию слева',
+    'No servers yet': 'Пока нет серверов',
+  };
+
+  List<_N> _navItems() => [
+    _N(0, _t('Home'), Icons.home_outlined),
+    _N(1, _t('Servers'), Icons.dns_outlined),
+    _N(2, _t('Friends'), Icons.people_outline),
+    _N(3, _t('Messages'), Icons.chat_outlined),
+    _N(4, _t('Parties'), Icons.groups_outlined),
+    _N(5, _t('Profile'), Icons.person_outline),
   ];
 
   @override
@@ -142,7 +154,6 @@ class _AppShellState extends State<AppShell> with TickerProviderStateMixin {
     return Scaffold(
       body: Row(
         children: [
-          // Navigation rail
           Container(
             width: 68,
             decoration: BoxDecoration(color: AppColors.background, border: Border(right: BorderSide(color: AppColors.border, width: 1))),
@@ -156,7 +167,7 @@ class _AppShellState extends State<AppShell> with TickerProviderStateMixin {
                 const SizedBox(height: 8),
                 Container(height: 1, margin: const EdgeInsets.symmetric(horizontal: 18), color: AppColors.border),
                 Expanded(child: ListView(children: [
-                  ..._navItems(context).map((item) {
+                  ..._navItems().map((item) {
                     final selected = _navIndex == item.id;
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 10),
@@ -179,7 +190,6 @@ class _AppShellState extends State<AppShell> with TickerProviderStateMixin {
                       ),
                     );
                   }),
-                  // Servers in the nav rail (like Discord)
                   if (_servers.isNotEmpty) ...[
                     Container(height: 1, margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 6), color: AppColors.border),
                     ..._servers.map((s) {
@@ -193,8 +203,7 @@ class _AppShellState extends State<AppShell> with TickerProviderStateMixin {
                           verticalOffset: 4,
                           child: GestureDetector(
                             onTap: () => _selectServer(s),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 180), curve: Curves.easeOutCubic,
+                            child: Container(
                               width: 48, height: 48,
                               decoration: BoxDecoration(
                                 color: AppColors.serverIconBg,
@@ -211,7 +220,6 @@ class _AppShellState extends State<AppShell> with TickerProviderStateMixin {
                   ],
                 ])),
                 Container(height: 1, margin: const EdgeInsets.symmetric(horizontal: 18), color: AppColors.border),
-                // Profile badge
                 GestureDetector(
                   onTap: () => setState(() => _navIndex = 5),
                   child: Container(padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6), child: Column(children: [
@@ -243,34 +251,32 @@ class _AppShellState extends State<AppShell> with TickerProviderStateMixin {
   }
 
   Widget _buildPage() {
-    final locale = context.select<SettingsProvider, Locale>((s) => s.locale);
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 200),
       switchInCurve: Curves.easeOutCubic,
       switchOutCurve: Curves.easeOutCubic,
-      child: KeyedSubtree(key: ValueKey('nav-$_navIndex-${locale.languageCode}'), child: _pageContent()),
+      child: KeyedSubtree(key: ValueKey('nav-$_navIndex'), child: _pageContent()),
     );
   }
 
   Widget _pageContent() {
-    final locale = context.select<SettingsProvider, Locale>((s) => s.locale);
     switch (_navIndex) {
       case 0: return _homeTab();
       case 1: return _serversView();
       case 2: return Column(children: [
-        _topBar('Friends'.t(context), showBack: _navIndex != 0, onBack: () => setState(() => _navIndex = 0)),
-        Expanded(child: FriendsScreen(key: ValueKey('friends-${locale.languageCode}'))),
+        _topBar(_t('Friends'), showBack: _navIndex != 0, onBack: () => setState(() => _navIndex = 0)),
+        Expanded(child: FriendsScreen()),
       ]);
       case 3: return Column(children: [
-        _topBar('Messages'.t(context), showBack: _navIndex != 0, onBack: () => setState(() => _navIndex = 0)),
-        Expanded(child: MessagesScreen(key: ValueKey('messages-${locale.languageCode}'))),
+        _topBar(_t('Messages'), showBack: _navIndex != 0, onBack: () => setState(() => _navIndex = 0)),
+        Expanded(child: MessagesScreen()),
       ]);
       case 4: return Column(children: [
-        _topBar('Parties'.t(context), showBack: _navIndex != 0, onBack: () => setState(() => _navIndex = 0)),
-        Expanded(child: PartyFinderScreen(key: ValueKey('parties-${locale.languageCode}'))),
+        _topBar(_t('Parties'), showBack: _navIndex != 0, onBack: () => setState(() => _navIndex = 0)),
+        Expanded(child: PartyFinderScreen()),
       ]);
       case 5: return Column(children: [
-        _topBar('Profile'.t(context), showBack: _navIndex != 0, onBack: () => setState(() => _navIndex = 0)),
+        _topBar(_t('Profile'), showBack: _navIndex != 0, onBack: () => setState(() => _navIndex = 0)),
         Expanded(child: ProfileScreen(onUpdate: reloadProfile)),
       ]);
       default: return _homeTab();
@@ -281,12 +287,12 @@ class _AppShellState extends State<AppShell> with TickerProviderStateMixin {
     return Column(children: [
       _topBar('Squall'),
       Expanded(child: ListView(padding: const EdgeInsets.all(24), children: [
-        Text('Your Servers'.t(context), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary, letterSpacing: 0.5)),
+        Text(_t('Your Servers'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary, letterSpacing: 0.5)),
         const SizedBox(height: 12),
         SizedBox(
           height: 72,
           child: _servers.isEmpty
-              ? Text('No servers yet'.t(context), style: const TextStyle(color: AppColors.textMuted))
+              ? Text(_t('No servers yet'), style: const TextStyle(color: AppColors.textMuted))
               : ListView.separated(
                   scrollDirection: Axis.horizontal, separatorBuilder: (_, __) => const SizedBox(width: 12),
                   itemCount: _servers.length,
@@ -303,9 +309,9 @@ class _AppShellState extends State<AppShell> with TickerProviderStateMixin {
                 ),
         ),
         const SizedBox(height: 32),
-        const Text('Welcome to Squall', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+        Text(_t('Welcome to Squall'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
         const SizedBox(height: 8),
-        Text('Use the navigation on the left'.t(context), style: const TextStyle(fontSize: 13, color: AppColors.textMuted)),
+        Text(_t('Use the navigation on the left'), style: const TextStyle(fontSize: 13, color: AppColors.textMuted)),
       ])),
     ]);
   }
@@ -325,7 +331,7 @@ class _AppShellState extends State<AppShell> with TickerProviderStateMixin {
       );
     }
     return Column(key: const ValueKey('hub'), children: [
-      _topBar('Servers'.t(context), showBack: _navIndex != 0, onBack: () => setState(() => _navIndex = 0)),
+      _topBar(_t('Servers'), showBack: _navIndex != 0, onBack: () => setState(() => _navIndex = 0)),
       Expanded(
         child: ServerHub(
           key: ValueKey('servers-${_servers.length}'),
@@ -350,7 +356,6 @@ class _AppShellState extends State<AppShell> with TickerProviderStateMixin {
   }
 
   Future<void> _reloadCurrentServer() async {
-    // Force full reload of servers and channels
     try {
       _servers = await SupabaseService.getMyServers();
       if (_selectedServer != null) {
@@ -362,7 +367,6 @@ class _AppShellState extends State<AppShell> with TickerProviderStateMixin {
             _selectedChannel = _channels.first;
           }
         } else {
-          // Server was deleted
           _selectedServer = null;
           _selectedChannel = null;
           _showServerContent = false;

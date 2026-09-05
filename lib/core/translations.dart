@@ -33,9 +33,9 @@ class Translations {
     'Push to Talk': 'Push to Talk',
     'Voice Activity Detection': 'Определение голоса',
     'Edit Profile': 'Редактировать профиль',
-    'Display Name': 'Отображаемое имя',
-    'Username': 'Имя пользователя', 'Status': 'Статус',
-    'Member Since': 'На сайте с', 'Save': 'Сохранить', 'Cancel': 'Отмена',
+    'Display Name': 'Отображаемое имя', 'Username': 'Имя пользователя',
+    'Status': 'Статус', 'Member Since': 'На сайте с',
+    'Save': 'Сохранить', 'Cancel': 'Отмена',
     'Create': 'Создать', 'No parties found': 'Пати не найдены',
     'Create one or adjust filters': 'Создайте новую или измените фильтры',
     'Filter': 'Фильтр', 'Your Servers': 'Ваши серверы',
@@ -67,6 +67,12 @@ class Translations {
     'Platform': 'Платформа', 'Min Rank': 'Мин. ранг',
     'Any': 'Любой',
   };
+}
+
+String tr(BuildContext context, String key) {
+  final locale = context.read<SettingsProvider>().locale.languageCode;
+  if (locale != 'ru') return key;
+  return Translations._ru[key] ?? key;
 }
 
 extension Translate on String {
