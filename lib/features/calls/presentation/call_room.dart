@@ -41,7 +41,6 @@ class _CallRoomState extends State<CallRoom> with WidgetsBindingObserver {
   String _localStatus = 'online';
   Timer? _timer;
   int _callDuration = 0;
-  Map<String, double> _speakingLevels = {};
   String? _viewingScreenShare; // identity of participant whose screen to watch
 
   @override
@@ -85,16 +84,22 @@ class _CallRoomState extends State<CallRoom> with WidgetsBindingObserver {
       }
       _room!.addListener(_onRoomUpdate);
 
-      await _room!.localParticipant?.setMicrophoneEnabled(true);
+      // Enable microphone with good capture quality
+      await _room!.localParticipant?.setMicrophoneEnabled(
+        true,
+        audioCaptureOptions: const AudioCaptureOptions(
+          echoCancellation: true,
+          autoGainControl: true,
+          noiseSuppression: true,
+        ),
+      );
 
-      _timer = Timer.periodic(const Duration(milliseconds: 300), (_) {
+      // Room listener rebuilds UI on participant/speaker/track changes
+      _room!.addListener(_onRoomUpdate);
+
+      _timer = Timer.periodic(const Duration(milliseconds: 500), (_) {
         if (!mounted) return;
-        setState(() {
-          _callDuration++;
-          for (final p in _room!.remoteParticipants.values) {
-            _speakingLevels[p.identity] = p.audioLevel;
-          }
-        });
+        setState(() => _callDuration++);
       });
 
       setState(() {
@@ -120,9 +125,8 @@ class _CallRoomState extends State<CallRoom> with WidgetsBindingObserver {
     });
   }
 
-  bool _isSpeaking(String name) {
-    final level = _speakingLevels[name];
-    return level != null && level > 0.05;
+  bool _isSpeaking(RemoteParticipant? p) {
+    return p?.isSpeaking ?? false;
   }
 
   String _formatDuration(int sec) {
@@ -298,10 +302,10 @@ class _CallRoomState extends State<CallRoom> with WidgetsBindingObserver {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.all(8),
         children: [
-          SquallAvatar(name: _localName, avatarUrl: _localAvatar, size: 48, isSpeaking: _isSpeaking(_localName)),
+          SquallAvatar(name: _localName, avatarUrl: _localAvatar, size: 48, isSpeaking: _micOn && _localName.isNotEmpty),
           ...participants.map((p) => Padding(
             padding: const EdgeInsets.only(left: 8),
-            child: SquallAvatar(name: p.identity, size: 48, isSpeaking: _isSpeaking(p.identity)),
+            child: SquallAvatar(name: p.identity, size: 48, isSpeaking: _isSpeaking(p)),
           )),
         ],
       ),
@@ -316,7 +320,7 @@ class _CallRoomState extends State<CallRoom> with WidgetsBindingObserver {
           name: _localName,
           avatarUrl: _localAvatar,
           status: _localStatus,
-          isSpeaking: _isSpeaking(_localName),
+          isSpeaking: _micOn && _localName.isNotEmpty,
           subtitle: _micOn ? null : 'Muted',
           micEnabled: _micOn,
           hasCam: _camOn,
@@ -330,8 +334,8 @@ class _CallRoomState extends State<CallRoom> with WidgetsBindingObserver {
             name: p.identity,
             avatarUrl: null,
             status: 'online',
-            isSpeaking: _isSpeaking(p.identity),
-            subtitle: _isSpeaking(p.identity) ? 'Speaking...' : null,
+            isSpeaking: _isSpeaking(p),
+            subtitle: _isSpeaking(p) ? 'Speaking...' : null,
             micEnabled: p.trackPublications.values.any((t) => t.source == TrackSource.microphone && !t.muted),
             hasCam: p.trackPublications.values.any((t) => t.source == TrackSource.camera),
             isScreenSharing: p.trackPublications.values.any((t) => t.source == TrackSource.screenShareVideo),
