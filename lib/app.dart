@@ -33,7 +33,7 @@ class SquallApp extends StatelessWidget {
           theme: AppTheme.darkTheme,
           locale: settings.locale,
           supportedLocales: const [Locale('en'), Locale('ru')],
-          home: const _AuthGate(),
+          home: _AuthGate(),
         ),
       ),
     );
@@ -41,7 +41,6 @@ class SquallApp extends StatelessWidget {
 }
 
 class _AuthGate extends StatefulWidget {
-  const _AuthGate();
   @override
   State<_AuthGate> createState() => _AuthGateState();
 }
@@ -60,12 +59,8 @@ class _AuthGateState extends State<_AuthGate> {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<SettingsProvider>();
-    final reduced = s.reducedEffects;
-    final fog = s.fogIntensity;
-    final arc = s.arcIntensity;
-    final glowColor = s.selectedGlowColor;
     if (!SupabaseConfig.isConfigured) {
-      return AtmosphericBackground(reducedEffects: reduced, fogIntensity: fog, arcIntensity: arc, glowColor: glowColor, child: Scaffold(body: Center(
+      return AtmosphericBackground(reducedEffects: s.reducedEffects, fogIntensity: s.fogIntensity, arcIntensity: s.arcIntensity, glowColor: s.selectedGlowColor, child: Scaffold(body: Center(
         child: Padding(padding: const EdgeInsets.all(32), child: Column(mainAxisSize: MainAxisSize.min, children: [
           AppEffects.squallLogo(size: 64), const SizedBox(height: 24),
           const Text('Squall', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
@@ -75,7 +70,7 @@ class _AuthGateState extends State<_AuthGate> {
       )));
     }
     final session = Supabase.instance.client.auth.currentSession;
-    return AtmosphericBackground(reducedEffects: reduced, fogIntensity: fog, arcIntensity: arc, glowColor: glowColor, child: session != null ? const AppShell() : LoginScreen(onLogin: () => setState(() {})));
+    return AtmosphericBackground(reducedEffects: s.reducedEffects, fogIntensity: s.fogIntensity, arcIntensity: s.arcIntensity, glowColor: s.selectedGlowColor, child: session != null ? const AppShell() : LoginScreen(onLogin: () => setState(() {})));
   }
 }
 

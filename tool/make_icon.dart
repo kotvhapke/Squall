@@ -22,16 +22,13 @@ Image generateIcon(int size) {
   final img = Image(width: size, height: size);
   final s = size;
   final half = s / 2;
-  final rr = s * 0.22;
-  final x0 = s * 0.28;
-  final y0 = s * 0.22;
-  final w = s * 0.44;
-  final h = s * 0.56;
+  final rr = s * 0.22; // corner radius
 
-  // Colors
-  final bgColor = ColorRgb8(5, 7, 12);
-  final cyan = ColorRgb8(0, 168, 255);
-  final brightCyan = ColorRgb8(120, 235, 255);
+  // Use a bold S drawn with thick rounded strokes
+  // We draw 3 rounded rectangles forming an S
+  final thick = s * 0.22;
+  final r = thick / 2;
+  final pad = s * 0.14;
 
   for (int y = 0; y < s; y++) {
     for (int x = 0; x < s; x++) {
@@ -47,57 +44,49 @@ Image generateIcon(int size) {
         continue;
       }
 
-      img.setPixelRgba(x, y, bgColor.r, bgColor.g, bgColor.b, 255);
+      // Dark background
+      img.setPixelRgba(x, y, 5, 7, 12, 255);
 
-      // Draw neon S shape: thick path with glow
-      // Check distance to the S path
-      // S path: top-right, middle-left, bottom-right
-      final pts = [
-        Point(x0, y0 + h * 0.12),
-        Point(x0 + w, y0),
-        Point(x0 + w, y0 + h * 0.45),
-        Point(x0, y0 + h * 0.5),
-        Point(x0, y0 + h * 0.88),
-        Point(x0 + w, y0 + h),
-      ];
+      // Draw the S as three bars + connecting verticals
+      final barH = thick;
+      final barR = r;
 
-      double minDist = double.infinity;
-      for (int i = 0; i < pts.length - 1; i++) {
-        final d = distToSegment(x, y, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y);
-        if (d < minDist) minDist = d;
+      // Top bar: right side, from center to right edge
+      if (_insideBar(x, y, half - barH * 0.4, pad, s * 0.65, pad + barH, barR)) {
+        img.setPixelRgba(x, y, 255, 255, 255, 255); continue;
       }
 
-      final glowWidth = s * 0.12;
-      final strokeWidth = s * 0.045;
+      // Middle bar: left side, bridge
+      if (_insideBar(x, y, s * 0.12, half - barH / 2, s * 0.55, half + barH / 2, barR)) {
+        img.setPixelRgba(x, y, 255, 255, 255, 255); continue;
+      }
 
-      if (minDist < strokeWidth) {
-        // Bright cyan core
-        img.setPixelRgba(x, y, brightCyan.r, brightCyan.g, brightCyan.b, 255);
-      } else if (minDist < glowWidth) {
-        // Neon glow
-        final alpha = ((1 - (minDist - strokeWidth) / (glowWidth - strokeWidth)) * 200).round().clamp(0, 200);
-        img.setPixelRgba(x, y, cyan.r, cyan.g, cyan.b, (255 * alpha / 255).round());
+      // Bottom bar: left side, from left edge to center
+      if (_insideBar(x, y, s * 0.12, s - pad - barH, half + barH * 0.4, s - pad, barR)) {
+        img.setPixelRgba(x, y, 255, 255, 255, 255); continue;
+      }
+
+      // Right vertical connector: between top and middle
+      if (x > s * 0.52 && x < s * 0.52 + barH && y > pad + barH && y < half + barH / 2) {
+        img.setPixelRgba(x, y, 255, 255, 255, 255); continue;
+      }
+
+      // Left vertical connector: between middle and bottom
+      if (x > s * 0.12 && x < s * 0.12 + barH && y > half - barH / 2 && y < s - pad) {
+        img.setPixelRgba(x, y, 255, 255, 255, 255); continue;
       }
     }
   }
   return img;
 }
 
-double distToSegment(int px, int py, double x1, double y1, double x2, double y2) {
-  final dx = x2 - x1;
-  final dy = y2 - y1;
-  final lenSq = dx * dx + dy * dy;
-  if (lenSq == 0) return sqrt((px - x1) * (px - x1) + (py - y1) * (py - y1));
-  double t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
-  t = t.clamp(0.0, 1.0);
-  final projX = x1 + t * dx;
-  final projY = y1 + t * dy;
-  return sqrt((px - projX) * (px - projX) + (py - projY) * (py - projY));
-}
-
-class Point {
-  final double x, y;
-  Point(this.x, this.y);
+bool _insideBar(int px, int py, double x1, double y1, double x2, double y2, double r) {
+  if (px < x1 - r || px > x2 + r || py < y1 - r || py > y2 + r) return false;
+  if (px < x1 + r && py < y1 + r) return (px - (x1 + r)) * (px - (x1 + r)) + (py - (y1 + r)) * (py - (y1 + r)) <= r * r;
+  if (px > x2 - r && py < y1 + r) return (px - (x2 - r)) * (px - (x2 - r)) + (py - (y1 + r)) * (py - (y1 + r)) <= r * r;
+  if (px < x1 + r && py > y2 - r) return (px - (x1 + r)) * (px - (x1 + r)) + (py - (y2 - r)) * (py - (y2 - r)) <= r * r;
+  if (px > x2 - r && py > y2 - r) return (px - (x2 - r)) * (px - (x2 - r)) + (py - (y2 - r)) * (py - (y2 - r)) <= r * r;
+  return true;
 }
 
 Uint8List encodeIco(Map<int, Uint8List> pngs) {
