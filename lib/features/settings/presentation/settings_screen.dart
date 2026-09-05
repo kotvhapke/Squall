@@ -20,6 +20,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final reduced = context.select<SettingsProvider, bool>((s) => s.reducedEffects);
     final volume = context.select<SettingsProvider, double>((s) => s.masterVolume);
     final mic = context.select<SettingsProvider, double>((s) => s.micSensitivity);
+    final fog = context.select<SettingsProvider, double>((s) => s.fogIntensity);
+    final arc = context.select<SettingsProvider, double>((s) => s.arcIntensity);
+    final glowColor = context.select<SettingsProvider, String>((s) => s.glowColor);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -41,6 +44,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 12),
                 _toggleTile('Reduced Effects'.t(context), reduced, (v) => s.setReducedEffects(v)),
                 _toggleTile('Show Online Only'.t(context), context.select<SettingsProvider, bool>((s) => s.showOnlineOnly), (v) => s.setShowOnlineOnly(v)),
+                const SizedBox(height: 16),
+                _section('Background Effects'.t(context)),
+                const SizedBox(height: 4),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 4),
+                  child: Text('Neon glow that appears and fades across the background',
+                      style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                ),
+                _sliderTile('Fog Intensity'.t(context), fog, '${fog.round()}%', (v) => s.setFogIntensity(v)),
+                _sliderTile('Arc Intensity'.t(context), arc, '${arc.round()}%', (v) => s.setArcIntensity(v)),
+                _colorPickerTile(glowColor, (v) => s.setGlowColor(v)),
                 const SizedBox(height: 16),
                 _section('Language'.t(context)),
                 const SizedBox(height: 8),
@@ -159,6 +173,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
             activeThumbColor: AppColors.electricBlue,
             activeTrackColor: AppColors.blue.withValues(alpha: 0.4),
             inactiveTrackColor: AppColors.panelBgOpaque,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _colorPickerTile(String current, ValueChanged<String> onChanged) {
+    final colors = [
+      ('electricBlue', 'Electric Blue', const Color(0xFF00A8FF)),
+      ('coldNeon', 'Cold Neon', const Color(0xFF36D6FF)),
+      ('purple', 'Purple', const Color(0xFFA855F7)),
+      ('green', 'Green', const Color(0xFF36D66E)),
+      ('pink', 'Pink', const Color(0xFFFF4D8F)),
+    ];
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          SizedBox(width: 140, child: Text('Glow Color'.t(context), style: const TextStyle(fontSize: 13, color: AppColors.textSecondary))),
+          Expanded(
+            child: SizedBox(
+              height: 38,
+              child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: colors.map((c) {
+                final selected = c.$1 == current;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: GestureDetector(
+                    onTap: () => onChanged(c.$1),
+                    child: Container(
+                      width: 36, height: 36,
+                      decoration: BoxDecoration(
+                        color: c.$3,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: selected ? Colors.white : Colors.transparent,
+                          width: 2,
+                        ),
+                      ),
+                      child: selected
+                          ? const Icon(Icons.check, size: 18, color: Colors.white)
+                          : null,
+                    ),
+                  ),
+                );
+              }).toList(),
+              ),
+            ),
           ),
         ],
       ),

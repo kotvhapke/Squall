@@ -12,6 +12,9 @@ class SettingsProvider extends ChangeNotifier {
   bool _showOnlineOnly = false;
   bool _soundOnNotification = true;
   bool _enableVoiceActivity = true;
+  double _fogIntensity = 50;
+  double _arcIntensity = 50;
+  String _glowColor = 'electricBlue';
 
   bool get reducedEffects => _reducedEffects;
   Locale get locale => _locale;
@@ -21,6 +24,9 @@ class SettingsProvider extends ChangeNotifier {
   bool get showOnlineOnly => _showOnlineOnly;
   bool get soundOnNotification => _soundOnNotification;
   bool get enableVoiceActivity => _enableVoiceActivity;
+  double get fogIntensity => _fogIntensity;
+  double get arcIntensity => _arcIntensity;
+  String get glowColor => _glowColor;
 
   SettingsProvider({SettingsPersistence? store})
       : _store = store ?? createSettingsPersistence(),
@@ -38,6 +44,9 @@ class SettingsProvider extends ChangeNotifier {
     _showOnlineOnly = _store.get('squall_online') == 'true';
     _soundOnNotification = _store.get('squall_sound') != 'false';
     _enableVoiceActivity = _store.get('squall_vad') != 'false';
+    _fogIntensity = double.tryParse(_store.get('squall_fog') ?? '') ?? 50;
+    _arcIntensity = double.tryParse(_store.get('squall_arc') ?? '') ?? 50;
+    _glowColor = _store.get('squall_glow_color') ?? 'electricBlue';
   }
 
   void setReducedEffects(bool value) {
@@ -90,5 +99,34 @@ class SettingsProvider extends ChangeNotifier {
     _enableVoiceActivity = value;
     _store.set('squall_vad', value.toString());
     notifyListeners();
+  }
+
+  void setFogIntensity(double value) {
+    _fogIntensity = value;
+    _store.set('squall_fog', value.toString());
+    notifyListeners();
+  }
+
+  void setArcIntensity(double value) {
+    _arcIntensity = value;
+    _store.set('squall_arc', value.toString());
+    notifyListeners();
+  }
+
+  void setGlowColor(String value) {
+    _glowColor = value;
+    _store.set('squall_glow_color', value);
+    notifyListeners();
+  }
+
+  Color get selectedGlowColor {
+    switch (_glowColor) {
+      case 'electricBlue': return const Color(0xFF00A8FF);
+      case 'coldNeon': return const Color(0xFF36D6FF);
+      case 'purple': return const Color(0xFFA855F7);
+      case 'green': return const Color(0xFF36D66E);
+      case 'pink': return const Color(0xFFFF4D8F);
+      default: return const Color(0xFF00A8FF);
+    }
   }
 }

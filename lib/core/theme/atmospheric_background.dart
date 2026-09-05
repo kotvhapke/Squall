@@ -5,11 +5,17 @@ import 'package:squall/core/theme/app_colors.dart';
 class AtmosphericBackground extends StatefulWidget {
   final Widget child;
   final bool reducedEffects;
+  final double fogIntensity;
+  final double arcIntensity;
+  final Color glowColor;
 
   const AtmosphericBackground({
     super.key,
     required this.child,
     this.reducedEffects = false,
+    this.fogIntensity = 50,
+    this.arcIntensity = 50,
+    this.glowColor = AppColors.electricBlue,
   });
 
   @override
@@ -35,7 +41,7 @@ class _AtmosphericBackgroundState extends State<AtmosphericBackground>
 
   void _initArcs() {
     final rng = Random(42);
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 5; i++) {
       _arcs.add(_ElectricArc(
         startX: rng.nextDouble(),
         startY: rng.nextDouble(),
@@ -43,18 +49,18 @@ class _AtmosphericBackgroundState extends State<AtmosphericBackground>
         endY: rng.nextDouble(),
         opacity: 0.06 + rng.nextDouble() * 0.04,
         phase: rng.nextDouble() * 2 * pi,
-        speed: 0.3 + rng.nextDouble() * 0.4,
+        speed: 0.2 + rng.nextDouble() * 0.5,
       ));
     }
   }
 
   void _initParticles() {
     final rng = Random(42);
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 8; i++) {
       _particles.add(_FogParticle(
         x: rng.nextDouble(),
         y: 0.1 + rng.nextDouble() * 0.8,
-        radius: 80 + rng.nextDouble() * 120,
+        radius: 80 + rng.nextDouble() * 140,
         opacity: 0.04 + rng.nextDouble() * 0.04,
         driftX: (rng.nextDouble() - 0.5) * 0.003,
         driftY: (rng.nextDouble() - 0.5) * 0.001,
@@ -72,22 +78,29 @@ class _AtmosphericBackgroundState extends State<AtmosphericBackground>
   Widget build(BuildContext context) {
     if (widget.reducedEffects) return widget.child;
 
+    final fogFactor = widget.fogIntensity / 100;
+    final arcFactor = widget.arcIntensity / 100;
+
     return AnimatedBuilder(
       animation: _fogController,
       builder: (context, child) {
         return Stack(
           children: [
             widget.child,
-            IgnorePointer(
-              child: CustomPaint(
-                size: Size.infinite,
-                painter: _FogPainter(
-                  particles: _particles,
-                  arcs: _arcs,
-                  time: _fogController.value,
+            if (fogFactor > 0.01 || arcFactor > 0.01)
+              IgnorePointer(
+                child: CustomPaint(
+                  size: Size.infinite,
+                  painter: _FogPainter(
+                    particles: _particles,
+                    arcs: _arcs,
+                    time: _fogController.value,
+                    glowColor: widget.glowColor,
+                    fogFactor: fogFactor,
+                    arcFactor: arcFactor,
+                  ),
                 ),
               ),
-            ),
           ],
         );
       },
@@ -124,11 +137,17 @@ class _FogPainter extends CustomPainter {
   final List<_FogParticle> particles;
   final List<_ElectricArc> arcs;
   final double time;
+  final Color glowColor;
+  final double fogFactor;
+  final double arcFactor;
 
   _FogPainter({
     required this.particles,
     required this.arcs,
     required this.time,
+    required this.glowColor,
+    required this.fogFactor,
+    required this.arcFactor,
   });
 
   @override
@@ -137,22 +156,22 @@ class _FogPainter extends CustomPainter {
       final dx = p.x + sin(time * 2 * pi + p.x * 10) * p.driftX * 100;
       final dy = p.y + cos(time * 2 * pi + p.y * 10) * p.driftY * 100;
       final paint = Paint()
-        ..color = AppColors.electricBlue.withValues(alpha: p.opacity)
+        ..color = glowColor.withValues(alpha: p.opacity * fogFactor * 2)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 60);
       canvas.drawCircle(
         Offset(dx * size.width, dy * size.height),
-        p.radius,
+        p.radius * fogFactor,
         paint,
       );
     }
 
     for (final a in arcs) {
       final flicker = sin(time * 2 * pi * a.speed + a.phase);
-      final alpha = a.opacity * (0.5 + 0.5 * flicker).clamp(0.0, 1.0);
+      final alpha = a.opacity * (0.5 + 0.5 * flicker).clamp(0.0, 1.0) * arcFactor * 2;
       if (alpha < 0.01) continue;
       final paint = Paint()
-        ..color = AppColors.electricBlue.withValues(alpha: alpha)
-        ..strokeWidth = 0.8
+        ..color = glowColor.withValues(alpha: alpha)
+        ..strokeWidth = 1.2
         ..style = PaintingStyle.stroke;
       canvas.drawLine(
         Offset(a.startX * size.width, a.startY * size.height),
@@ -163,5 +182,7 @@ class _FogPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_FogPainter old) => time != old.time;
+  bool shouldRepaint(_FogPainter old) =>
+      time != old.time || glowColor != old.glowColor ||
+      fogFactor != old.fogFactor || arcFactor != old.arcFactor;
 }

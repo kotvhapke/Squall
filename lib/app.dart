@@ -59,9 +59,13 @@ class _AuthGateState extends State<_AuthGate> {
 
   @override
   Widget build(BuildContext context) {
-    final reduced = context.watch<SettingsProvider>().reducedEffects;
+    final s = context.watch<SettingsProvider>();
+    final reduced = s.reducedEffects;
+    final fog = s.fogIntensity;
+    final arc = s.arcIntensity;
+    final glowColor = s.selectedGlowColor;
     if (!SupabaseConfig.isConfigured) {
-      return AtmosphericBackground(reducedEffects: reduced, child: Scaffold(body: Center(
+      return AtmosphericBackground(reducedEffects: reduced, fogIntensity: fog, arcIntensity: arc, glowColor: glowColor, child: Scaffold(body: Center(
         child: Padding(padding: const EdgeInsets.all(32), child: Column(mainAxisSize: MainAxisSize.min, children: [
           AppEffects.squallLogo(size: 64), const SizedBox(height: 24),
           const Text('Squall', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
@@ -71,7 +75,7 @@ class _AuthGateState extends State<_AuthGate> {
       )));
     }
     final session = Supabase.instance.client.auth.currentSession;
-    return AtmosphericBackground(reducedEffects: reduced, child: session != null ? const AppShell() : LoginScreen(onLogin: () => setState(() {})));
+    return AtmosphericBackground(reducedEffects: reduced, fogIntensity: fog, arcIntensity: arc, glowColor: glowColor, child: session != null ? const AppShell() : LoginScreen(onLogin: () => setState(() {})));
   }
 }
 

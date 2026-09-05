@@ -160,14 +160,42 @@ class _CallRoomState extends State<CallRoom> with WidgetsBindingObserver {
   Future<void> _toggleScreenShare() async {
     final lp = _room?.localParticipant;
     if (lp == null) return;
+    if (LiveKitService.screenShareEnabled) {
+      try {
+        await lp.setScreenShareEnabled(false);
+        _onRoomUpdate();
+      } catch (_) {}
+      return;
+    }
     try {
-      await lp.setScreenShareEnabled(!LiveKitService.screenShareEnabled);
+      await lp.setScreenShareEnabled(true, screenShareCaptureOptions: const ScreenShareCaptureOptions(
+        preferCurrentTab: true,
+        captureScreenAudio: false,
+      ));
       _onRoomUpdate();
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Screen sharing not supported on this platform')),
-        );
+      final msg = e.toString().toLowerCase();
+      if (msg.contains('not supported') || msg.contains('not found') || msg.contains('abort')) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: AppColors.darkBlue,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: AppColors.border)),
+              title: const Text('Screen Share', style: TextStyle(color: AppColors.textPrimary)),
+              content: const Text('Screen sharing is not supported in web browsers. Use the Windows app instead.', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK', style: TextStyle(color: AppColors.electricBlue))),
+              ],
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Screen share error: $e')),
+          );
+        }
       }
     }
   }
