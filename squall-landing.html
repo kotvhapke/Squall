@@ -156,28 +156,7 @@
 
 <nav>
   <div class="logo">
-    <svg width="36" height="36" viewBox="0 0 100 100" style="vertical-align:middle;margin-right:8px">
-      <defs>
-        <filter id="nglow" x="-60%" y="-60%" width="220%" height="220%">
-          <feGaussianBlur stdDeviation="4" result="blur"/>
-          <feFlood flood-color="#00A8FF" result="color"/>
-          <feComposite in="color" in2="blur" operator="in" result="glow"/>
-          <feMerge>
-            <feMergeNode in="glow"/>
-            <feMergeNode in="glow"/>
-            <feMergeNode in="SourceGraphic"/>
-          </feMerge>
-        </filter>
-      </defs>
-      <!-- Rounded dark square background -->
-      <rect x="2" y="2" width="96" height="96" rx="22" fill="#05070C" stroke="#00A8FF" stroke-opacity="0.18" stroke-width="1.5"/>
-      <!-- Geometric S: 3 segments + 2 verticals, in one continuous rounded stroke -->
-      <g filter="url(#nglow)">
-        <path d="M 33 25 H 70 V 47 H 30 V 69 H 65"
-              fill="none" stroke="#00A8FF" stroke-width="22"
-              stroke-linecap="round" stroke-linejoin="round"/>
-      </g>
-    </svg>
+    <img src="app/favicon-96.png" width="36" height="36" alt="Squall" style="vertical-align:middle;margin-right:8px;border-radius:8px">
     Squall
   </div>
   <div class="nav-links">
