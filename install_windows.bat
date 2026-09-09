@@ -3,7 +3,7 @@ title Squall — Установка
 setlocal enabledelayedexpansion
 
 :: Squall Auto-Installer
-:: Запускается из ZIP. Копирует файлы, создаёт ярлык на рабочем столе.
+:: Запускается из ZIP. Спрашивает про ярлык, копирует файлы, запускает Squall.
 :: Требует права администратора для Program Files.
 
 cd /d "%~dp0"
@@ -16,10 +16,20 @@ if not exist "squall.exe" (
     exit /b 1
 )
 
-:: 2. Определяем папку установки
+:: 2. Спрашиваем про ярлык на рабочем столе
+set "MAKE_SHORTCUT=Y"
+echo.
+echo ========================================
+echo    УСТАНОВКА SQUALL
+echo ========================================
+choice /C YN /M "Создать ярлык на рабочем столе?"
+if errorlevel 2 set "MAKE_SHORTCUT=N"
+
+:: 3. Определяем папку установки
 set "INSTALL_DIR=%LOCALAPPDATA%\Squall"
 
-:: 3. Копируем файлы
+:: 4. Копируем файлы
+echo.
 echo Установка в %INSTALL_DIR% ...
 if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
 copy /y "%~dp0squall.exe" "%INSTALL_DIR%\squall.exe" >nul
@@ -29,19 +39,21 @@ if exist "%~dp0data" (
     xcopy /e /i /q /y "%~dp0data" "%INSTALL_DIR%\data\" >nul
 )
 
-:: 4. Создаём ярлык на рабочем столе
-set "SHORTCUT=%USERPROFILE%\Desktop\Squall.lnk"
-if exist "%SHORTCUT%" del "%SHORTCUT%"
+:: 5. Ярлык на рабочем столе (по желанию)
+if /i "%MAKE_SHORTCUT%"=="Y" (
+    set "SHORTCUT=%USERPROFILE%\Desktop\Squall.lnk"
+    if exist "%SHORTCUT%" del "%SHORTCUT%"
+    powershell -NoProfile -Command ^
+    "$s = New-Object -ComObject WScript.Shell; $l = $s.CreateShortcut('%SHORTCUT%'); $l.TargetPath = '%INSTALL_DIR%\squall.exe'; $l.WorkingDirectory = '%INSTALL_DIR%'; $l.IconLocation = '%INSTALL_DIR%\squall.exe,0'; $l.Save()" >nul
+    echo Ярлык создан: %SHORTCUT%
+) else (
+    echo Ярлык не создан (пропущено).
+)
 
-powershell -NoProfile -Command ^
-"$s = New-Object -ComObject WScript.Shell; $l = $s.CreateShortcut('%SHORTCUT%'); $l.TargetPath = '%INSTALL_DIR%\squall.exe'; $l.WorkingDirectory = '%INSTALL_DIR%'; $l.IconLocation = '%INSTALL_DIR%\squall.exe,0'; $l.Save()" >nul
-
-:: 5. Запускаем приложение
-start "" "%INSTALL_DIR%\squall.exe"
-
-:: 6. Готово
+:: 6. Запускаем приложение
 echo.
 echo === Squall установлен! ===
-echo Ярлык на рабочем столе: %SHORTCUT%
-echo.
-timeout /t 3 /nobreak >nul
+start "" "%INSTALL_DIR%\squall.exe"
+
+:: 7. Завершаем установку без лишнего ожидания
+exit /b 0

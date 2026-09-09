@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:squall/core/theme/app_colors.dart';
 import 'package:squall/core/settings/settings_provider.dart';
 import 'package:squall/core/translations.dart';
+import 'package:squall/core/updater_service.dart';
 import 'package:squall/shared/widgets/squall_back_button.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -14,6 +16,9 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  bool _updating = false;
+  String? _updateMsg;
+
   @override
   Widget build(BuildContext context) {
     final s = context.read<SettingsProvider>();
@@ -63,6 +68,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _section('Notifications'.t(context)),
                 const SizedBox(height: 12),
                 _toggleTile('Sound on Notification'.t(context), context.select<SettingsProvider, bool>((s) => s.soundOnNotification), (v) => s.setSoundOnNotification(v)),
+                const SizedBox(height: 24),
+                _section('About & Update'.t(context)),
+                const SizedBox(height: 12),
+                _updateTile(),
+                if (_updateMsg != null) ...[
+                  const SizedBox(height: 8),
+                  Text(_updateMsg!, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                ],
                 const SizedBox(height: 24),
                 _section('Account'.t(context)),
                 const SizedBox(height: 12),
@@ -247,6 +260,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Icon(Icons.chevron_right, size: 20, color: AppColors.textMuted),
         ],
       ),
+      ),
+    );
+  }
+
+  Future<void> _runUpdate() async {
+    if (_updating) return;
+    setState(() { _updating = true; _updateMsg = null; });
+    try {
+      final info = await UpdaterService.checkForUpdate();
+      if (!info.available) {
+        setState(() { _updating = false; _updateMsg = 'You are on the latest version'.t(context); });
+        return;
+      }
+      if (!kIsWeb) {
+        setState(() => _updateMsg = 'New version available: ${info.version}'.t(context));
+        final batPath = await UpdaterService.prepareUpdate(info.url, onProgress: (p) {
+          if (mounted) setState(() => _updateMsg = 'Updating... ${(p * 100).round()}%'.t(context));
+        });
+        UpdaterService.runAndExit(batPath);
+        if (mounted) setState(() => _updateMsg = 'Restarting...'.t(context));
+      } else {
+        setState(() { _updating = false; _updateMsg = 'You are on the latest version'.t(context); });
+      }
+    } catch (e) {
+      setState(() { _updating = false; _updateMsg = '$e'; });
+    }
+  }
+
+  Widget _updateTile() {
+    return GestureDetector(
+      onTap: _runUpdate,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+        decoration: BoxDecoration(
+          color: AppColors.panelBgOpaque,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.border, width: 1),
+        ),
+        child: Row(
+          children: [
+            _updating
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.electricBlue))
+                : const Icon(Icons.system_update_alt, size: 20, color: AppColors.electricBlue),
+            const SizedBox(width: 12),
+            Expanded(child: Text('Update Squall'.t(context), style: const TextStyle(fontSize: 14, color: AppColors.textPrimary))),
+            if (!_updating) const Icon(Icons.chevron_right, size: 20, color: AppColors.textMuted),
+          ],
+        ),
       ),
     );
   }

@@ -66,6 +66,13 @@ class Translations {
     'Description': 'Описание', 'Mode': 'Режим',
     'Platform': 'Платформа', 'Min Rank': 'Мин. ранг',
     'Any': 'Любой',
+    'About & Update': 'О приложении и обновление',
+    'Update Squall': 'Обновить Squall',
+    'Check for Updates': 'Проверить обновления',
+    'You are on the latest version': 'У вас последняя версия',
+    'New version available:': 'Доступна новая версия:',
+    'Updating...': 'Обновление...',
+    'Current version': 'Текущая версия',
   };
 }
 
