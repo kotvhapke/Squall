@@ -62,3 +62,6 @@ supabase/.temp/
 /libwebrtc.zip
 /squall-windows.zip
 .vercel
+
+supabase/.temp/
+.supabase/
