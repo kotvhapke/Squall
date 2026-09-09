@@ -26,7 +26,7 @@ class UpdaterService {
   static const repo = 'https://api.github.com/repos/kotvhapke/Squall/releases/latest';
   static const _assetName = 'squall-windows.zip';
 
-  static Future<UpdateInfo> checkForUpdate({String currentVersion = '1.2.3'}) async {
+  static Future<UpdateInfo> checkForUpdate({String currentVersion = '1.2.4'}) async {
     try {
       final res = await http.get(Uri.parse(repo), headers: {'Accept': 'application/vnd.github+json'});
       if (res.statusCode != 200) {
@@ -157,5 +157,12 @@ exit
 
   static void runAndExit(String batPath) {
     Process.start('cmd', ['/c', 'start', '', batPath]);
+    // Caller should now exit the app.
+  }
+
+  static void exitApp() {
+    try {
+      Process.start('cmd', ['/c', 'start', '', 'taskkill', '/f', '/im', Platform.resolvedExecutable.split('\\').last]);
+    } catch (_) {}
   }
 }

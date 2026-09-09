@@ -89,25 +89,31 @@ class _AnimatedLogoState extends State<_AnimatedLogo> with TickerProviderStateMi
               ],
             ),
           ),
-          // White bold S with neon-blue drop shadow
-          Text(
-            'S',
-            style: TextStyle(
-              fontSize: widget.size * 0.8,
-              height: 1.0,
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-              shadows: [
-                Shadow(
-                  color: AppColors.electricBlue.withValues(alpha: 0.8 + 0.2 * glow),
-                  blurRadius: widget.size * 0.14,
+          // Real transparent S-logo image with neon glow keep
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: widget.size,
+                height: widget.size,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.electricBlue.withValues(alpha: 0.25 * glow),
+                      blurRadius: widget.size * 0.25,
+                      spreadRadius: widget.size * 0.05,
+                    ),
+                  ],
                 ),
-                Shadow(
-                  color: AppColors.coldNeon.withValues(alpha: 0.6),
-                  blurRadius: widget.size * 0.30,
-                ),
-              ],
-            ),
+              ),
+              Image.asset(
+                'assets/branding/squall-icon-user.png',
+                width: widget.size,
+                height: widget.size,
+                fit: BoxFit.contain,
+              ),
+            ],
           ),
         ],
       ),

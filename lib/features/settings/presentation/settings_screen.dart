@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -284,7 +285,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (mounted) setState(() => _updateMsg = 'Updating... ${(p * 100).round()}%'.t(context));
         });
         UpdaterService.runAndExit(batPath);
+        // Close the app so the bat can replace the running exe.
         if (mounted) setState(() => _updateMsg = 'Restarting...'.t(context));
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (kIsWeb) { /* no-op */ } else {
+          exit(0);
+        }
       } else {
         setState(() { _updating = false; _updateMsg = 'You are on the latest version'.t(context); });
       }
