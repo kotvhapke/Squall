@@ -26,7 +26,7 @@ class UpdaterService {
   static const repo = 'https://api.github.com/repos/kotvhapke/Squall/releases/latest';
   static const _assetName = 'squall-windows.zip';
 
-  static Future<UpdateInfo> checkForUpdate({String currentVersion = '1.1.8'}) async {
+  static Future<UpdateInfo> checkForUpdate({String currentVersion = '1.1.9'}) async {
     try {
       final res = await http.get(Uri.parse(repo), headers: {'Accept': 'application/vnd.github+json'});
       if (res.statusCode != 200) {
