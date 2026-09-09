@@ -26,7 +26,7 @@ class UpdaterService {
   static const repo = 'https://api.github.com/repos/kotvhapke/Squall/releases/latest';
   static const _assetName = 'squall-windows.zip';
 
-  static Future<UpdateInfo> checkForUpdate({String currentVersion = '1.3.1'}) async {
+  static Future<UpdateInfo> checkForUpdate({String currentVersion = '1.3.2'}) async {
     try {
       final res = await http.get(Uri.parse(repo), headers: {'Accept': 'application/vnd.github+json'});
       if (res.statusCode != 200) {
@@ -129,8 +129,11 @@ if not exist "%~dp0$exeName" (
   pause
   exit /b 1
 )
-:: Copy data outright (overwrite)
-if exist "$exeSourceDir\\data" xcopy /e /i /q /y "$exeSourceDir\\data" "%~dp0data\\" >nul 2>&1
+:: Remove old data and copy the new one fully (app.so included)
+if exist "%~dp0data" rmdir /s /q "%~dp0data"
+if exist "$exeSourceDir\\data" (
+  robocopy "$exeSourceDir\\data" "%~dp0data" /E /MIR /NFL /NDL /NJH /NJS >nul 2>&1
+)
 :: Copy any dlls
 for /r "$exeSourceDir" %%f in (*.dll) do copy /y "%%f" "%~dp0" >nul 2>&1
 :: Clean up staging
@@ -156,7 +159,8 @@ exit
   }
 
   static void runAndExit(String batPath) {
-    Process.start('cmd', ['/c', 'start', '', batPath]);
+    Process.start('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command',
+      "Start-Process -FilePath '$batPath' -WindowStyle Normal"]);
     // Caller should now exit the app.
   }
 
