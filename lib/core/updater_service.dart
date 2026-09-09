@@ -26,7 +26,7 @@ class UpdaterService {
   static const repo = 'https://api.github.com/repos/kotvhapke/Squall/releases/latest';
   static const _assetName = 'squall-windows.zip';
 
-  static Future<UpdateInfo> checkForUpdate({String currentVersion = '1.1.7'}) async {
+  static Future<UpdateInfo> checkForUpdate({String currentVersion = '1.1.8'}) async {
     try {
       final res = await http.get(Uri.parse(repo), headers: {'Accept': 'application/vnd.github+json'});
       if (res.statusCode != 200) {
@@ -107,7 +107,7 @@ class UpdaterService {
     final exeSourceDir = File(foundExe).parent;
 
     // Write a relaunch bat. It runs AFTER the app exits: copies staged files
-    // over the current install dir, then starts the new exe, then cleans up.
+    // over the current install dir, then starts the new exe.
     final batPath = '${installDir.path}\\squall-relaunch.bat';
     final bat = '''
 @echo off
@@ -117,13 +117,26 @@ timeout /t 2 /nobreak >nul
 taskkill /f /im "$exeName" >nul 2>&1
 timeout /t 1 /nobreak >nul
 echo [!] Installing Squall update...
-if exist "%~dp0squall.exe" del /f /q "%~dp0squall.exe"
-if exist "%~dp0data" rmdir /s /q "%~dp0data"
+:: Copy new exe first (only remove old if copy succeeded)
+if not exist "$exeSourceDir\\$exeName" (
+  echo [!] New exe not found in staging. Aborting.
+  pause
+  exit /b 1
+)
 copy /y "$exeSourceDir\\$exeName" "%~dp0$exeName" >nul 2>&1
-for /r "$exeSourceDir" %%f in (*.dll) do copy /y "%%f" "%~dp0" >nul 2>&1
+if not exist "%~dp0$exeName" (
+  echo [!] Failed to copy new exe. Aborting.
+  pause
+  exit /b 1
+)
+:: Copy data outright (overwrite)
 if exist "$exeSourceDir\\data" xcopy /e /i /q /y "$exeSourceDir\\data" "%~dp0data\\" >nul 2>&1
+:: Copy any dlls
+for /r "$exeSourceDir" %%f in (*.dll) do copy /y "%%f" "%~dp0" >nul 2>&1
+:: Clean up staging
 if exist "%~dp0squall-update-staging" rmdir /s /q "%~dp0squall-update-staging"
 echo [!] Done. Launching Squall...
+cd /d "%~dp0"
 start "" "%~dp0$exeName"
 exit
 ''';
