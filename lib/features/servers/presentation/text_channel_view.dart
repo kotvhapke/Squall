@@ -129,6 +129,8 @@ class _TextChannelViewState extends State<TextChannelView> {
 
   Widget _messageTile(Map<String, dynamic> msg) {
     final author = msg['author'] as Map<String, dynamic>? ?? {};
+    final authorId = msg['author_id'];
+    final isMe = authorId != null && authorId == SupabaseService.userId;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
@@ -148,6 +150,16 @@ class _TextChannelViewState extends State<TextChannelView> {
                     Text(author['display_name'] ?? author['username'] ?? 'Unknown', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                     const SizedBox(width: 8),
                     Text(_formatTime(msg['created_at'] as String? ?? ''), style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
+                    if (isMe) ...[
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () async {
+                          await SupabaseService.softDeleteMessage(msg['id'] as int);
+                          setState(() => _messages.removeWhere((m) => m['id'] == msg['id']));
+                        },
+                        child: Icon(Icons.delete_outline, size: 12, color: AppColors.textMuted),
+                      ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 2),

@@ -354,7 +354,7 @@ class _DmChatScreenState extends State<_DmChatScreen> {
 
   Widget _messageTile(Map<String, dynamic> msg) {
     final author = msg['author'] as Map<String, dynamic>? ?? {};
-    final isMe = author['id'] == SupabaseService.userId;
+    final isMe = author['id'] != null && author['id'] == SupabaseService.userId;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(

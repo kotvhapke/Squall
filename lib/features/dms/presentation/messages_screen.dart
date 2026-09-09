@@ -5,6 +5,7 @@ import 'package:squall/core/feature_flags.dart';
 import 'package:squall/core/supabase_service.dart';
 import 'package:squall/features/calls/presentation/call_room.dart';
 import 'package:squall/shared/widgets/squall_avatar.dart';
+import 'package:squall/shared/widgets/squall_button.dart';
 import 'package:squall/shared/widgets/squall_panel.dart';
 import 'package:squall/shared/widgets/states.dart';
 
@@ -141,12 +142,14 @@ class _DmChatState extends State<_DmChat> {
   List<Map<String, dynamic>> _messages = [];
   bool _loading = true;
   bool _sending = false;
+  bool _blocked = false;
   RealtimeChannel? _realtime;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _checkBlocked();
     _subscribe();
   }
 
@@ -157,6 +160,11 @@ class _DmChatState extends State<_DmChat> {
     } catch (_) {}
     if (mounted) setState(() => _loading = false);
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollDown());
+  }
+
+  Future<void> _checkBlocked() async {
+    final b = await SupabaseService.isBlocked(widget.otherUser['id']);
+    if (mounted) setState(() => _blocked = b);
   }
 
   void _subscribe() {
@@ -198,6 +206,24 @@ class _DmChatState extends State<_DmChat> {
     }
   }
 
+  void _showProfilePopover() {
+    final user = widget.otherUser;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.darkBlue,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) => _ProfileCard(user: user, onBlock: () async {
+        Navigator.pop(ctx);
+        if (_blocked) {
+          await SupabaseService.unblockUser(user['id']);
+        } else {
+          await SupabaseService.blockUser(user['id']);
+        }
+        await _checkBlocked();
+      }),
+    );
+  }
+
   @override
   void dispose() {
     _realtime?.unsubscribe();
@@ -219,10 +245,16 @@ class _DmChatState extends State<_DmChat> {
               children: [
                 GestureDetector(onTap: () { Navigator.pop(context); widget.onBack?.call(); }, child: const Icon(Icons.arrow_back, size: 20, color: AppColors.textSecondary)),
                 const SizedBox(width: 12),
-                SquallAvatar(name: name, size: 36),
+                GestureDetector(onTap: _showProfilePopover, child: SquallAvatar(name: name, size: 36)),
                 const SizedBox(width: 10),
                 Expanded(child: Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary))),
-                if (enableCalls) ...[
+                if (_blocked)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(color: AppColors.danger.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
+                    child: const Text('Blocked', style: TextStyle(fontSize: 11, color: AppColors.danger)),
+                  ),
+                if (!_blocked && enableCalls) ...[
                   IconButton(icon: const Icon(Icons.call, size: 20, color: AppColors.voiceActive), onPressed: () => _startCall('audio')),
                   IconButton(icon: const Icon(Icons.videocam, size: 20, color: AppColors.textSecondary), onPressed: () => _startCall('video')),
                 ],
@@ -239,10 +271,11 @@ class _DmChatState extends State<_DmChat> {
                     itemBuilder: (_, i) => _msgTile(_messages[i]),
                   ),
           ),
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-            decoration: BoxDecoration(border: Border(top: BorderSide(color: AppColors.border, width: 1))),
-            child: SquallPanel(
+          if (!_blocked)
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              decoration: BoxDecoration(border: Border(top: BorderSide(color: AppColors.border, width: 1))),
+              child: SquallPanel(
               padding: EdgeInsets.zero,
               child: Row(
                 children: [
@@ -268,7 +301,7 @@ class _DmChatState extends State<_DmChat> {
 
   Widget _msgTile(Map<String, dynamic> msg) {
     final author = msg['author'] as Map<String, dynamic>? ?? {};
-    final isMe = author['id'] == SupabaseService.userId;
+    final isMe = author['id'] != null && author['id'] == SupabaseService.userId;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
@@ -330,5 +363,50 @@ class _DmChatState extends State<_DmChat> {
   String _fmt(String iso) {
     try { final dt = DateTime.parse(iso).toLocal(); return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}'; }
     catch (_) { return ''; }
+  }
+}
+
+class _ProfileCard extends StatelessWidget {
+  final Map<String, dynamic> user;
+  final VoidCallback? onBlock;
+
+  const _ProfileCard({required this.user, this.onBlock});
+
+  @override
+  Widget build(BuildContext context) {
+    final name = user['display_name'] as String? ?? user['username'] as String? ?? 'Unknown';
+    final username = user['username'] as String? ?? '';
+    final status = user['status'] as String? ?? 'offline';
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SquallAvatar(name: name, size: 72),
+          const SizedBox(height: 12),
+          Text(name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+          const SizedBox(height: 4),
+          Text('@$username', style: const TextStyle(fontSize: 13, color: AppColors.textMuted)),
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            decoration: BoxDecoration(
+              color: status == 'online' ? AppColors.voiceActive.withValues(alpha: 0.15) : AppColors.panelBgOpaque,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(status, style: TextStyle(fontSize: 11, color: status == 'online' ? AppColors.voiceActive : AppColors.textMuted)),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SquallButton(label: 'Message', onPressed: () => Navigator.pop(context), height: 38, fullWidth: false),
+              const SizedBox(width: 10),
+              SquallButton(label: 'Block', onPressed: onBlock, primary: false, height: 38, fullWidth: false),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }

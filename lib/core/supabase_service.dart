@@ -190,6 +190,10 @@ class SupabaseService {
     await client.rpc('soft_delete_direct_message', params: {'message_id': messageId});
   }
 
+  static Future<void> softDeleteMessage(int messageId) async {
+    await client.rpc('soft_delete_message', params: {'message_id': messageId});
+  }
+
   static RealtimeChannel subscribeDirectMessages(int conversationId, void Function(Map<String, dynamic> msg) onMessage) {
     final channel = client.channel('dm-$conversationId');
     channel.onPostgresChanges(
@@ -215,7 +219,7 @@ class SupabaseService {
   static Future<bool> isBlocked(String otherUserId) async {
     final response = await client
         .from('blocks')
-        .select('id')
+        .select('blocker_id')
         .or('blocker_id.eq.$userId,blocked_id.eq.$userId')
         .or('blocker_id.eq.$otherUserId,blocked_id.eq.$otherUserId')
         .maybeSingle();
@@ -238,7 +242,6 @@ class SupabaseService {
     return response.map((e) => Map<String, dynamic>.from(e['blocked'])).toList();
   }
 
-  // --- Realtime (server messages) ---
   static RealtimeChannel subscribeMessages(int channelId, void Function(Map<String, dynamic> message) onMessage) {
     final channel = client.channel('messages-$channelId');
     channel.onPostgresChanges(

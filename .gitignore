@@ -61,3 +61,4 @@ supabase/.temp/
 /extract_webrtc.py
 /libwebrtc.zip
 /squall-windows.zip
+.vercel
