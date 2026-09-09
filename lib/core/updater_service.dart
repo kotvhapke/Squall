@@ -26,7 +26,7 @@ class UpdaterService {
   static const repo = 'https://api.github.com/repos/kotvhapke/Squall/releases/latest';
   static const _assetName = 'squall-windows.zip';
 
-  static Future<UpdateInfo> checkForUpdate({String currentVersion = '1.1.2'}) async {
+  static Future<UpdateInfo> checkForUpdate({String currentVersion = '1.1.4'}) async {
     try {
       final res = await http.get(Uri.parse(repo), headers: {'Accept': 'application/vnd.github+json'});
       if (res.statusCode != 200) {
@@ -96,12 +96,13 @@ setlocal
 cd /d "%~dp0"
 timeout /t 1 /nobreak >nul
 echo [!] Updating Squall... do not close this window.
+taskkill /f /im "$exeName" >nul 2>&1
+timeout /t 1 /nobreak >nul
 if exist squall.exe del /f /q squall.exe
 if exist *.dll del /f /q *.dll >nul 2>&1
 if exist data rmdir /s /q data
 powershell -NoProfile -Command "Expand-Archive -Path '%~dp0squall-update.zip' -DestinationPath '%~dp0' -Force" >nul 2>&1
 if not exist squall.exe (
-  :: fallback: unzip manually
   powershell -NoProfile -Command "Expand-Archive -Path '%~dp0squall-update.zip' -DestinationPath '%~dp0release' -Force" >nul 2>&1
   if exist "%~dp0release\\$exeName" copy /y "%~dp0release\\$exeName" "%~dp0$exeName" >nul
 )
@@ -117,7 +118,7 @@ exit
 
   /// Runs the update script detached (returns immediately).
   static void runAndExit(String batPath) {
-    Process.start('cmd', ['/c', 'start', '"Squall Update"', batPath]);
+    Process.start('cmd', ['/c', 'start', '', batPath]);
     // Caller should now exit the app.
   }
 }
