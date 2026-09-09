@@ -5,6 +5,7 @@ import 'package:squall/core/theme/app_theme.dart';
 import 'package:squall/core/theme/app_colors.dart';
 import 'package:squall/core/theme/effects.dart';
 import 'package:squall/core/settings/settings_provider.dart';
+import 'package:squall/core/shortcut_service.dart';
 import 'package:squall/core/theme/atmospheric_background.dart';
 import 'package:squall/core/supabase_config.dart';
 import 'package:squall/core/supabase_service.dart';
@@ -116,6 +117,11 @@ class _AppShellState extends State<AppShell> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _load();
+    _createShortcut();
+  }
+
+  Future<void> _createShortcut() async {
+    await ShortcutService.ensureDesktopShortcut();
   }
 
   Future<void> _load() async {
