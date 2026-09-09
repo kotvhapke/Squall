@@ -106,7 +106,7 @@ GRANT USAGE ON SEQUENCE public.party_listings_id_seq TO authenticated;
 -- RPC: join_party (checks slots + status)
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-CREATE OR REPLACE FUNCTION public.join_party(party_id BIGINT)
+CREATE OR REPLACE FUNCTION public.join_party(p_party_id BIGINT)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -120,7 +120,7 @@ DECLARE
   v_already BOOLEAN;
 BEGIN
   SELECT leader_id, max_players, status INTO v_leader_id, v_max, v_status
-  FROM public.party_listings WHERE id = party_id;
+  FROM public.party_listings WHERE id = p_party_id;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Party not found';
   END IF;
@@ -130,19 +130,19 @@ BEGIN
   IF v_leader_id = auth.uid() THEN
     RAISE EXCEPTION 'You are the leader';
   END IF;
-  SELECT EXISTS(SELECT 1 FROM public.party_members WHERE party_id = join_party.party_id AND user_id = auth.uid()) INTO v_already;
+  SELECT EXISTS(SELECT 1 FROM public.party_members WHERE party_id = p_party_id AND user_id = auth.uid()) INTO v_already;
   IF v_already THEN
     RAISE EXCEPTION 'Already joined';
   END IF;
-  SELECT COUNT(*) INTO v_current FROM public.party_members WHERE party_id = join_party.party_id;
+  SELECT COUNT(*) INTO v_current FROM public.party_members WHERE party_id = p_party_id;
   IF v_current >= v_max - 1 THEN
-    UPDATE public.party_listings SET status = 'full' WHERE id = party_id;
+    UPDATE public.party_listings SET status = 'full' WHERE id = p_party_id;
     RAISE EXCEPTION 'Party is full';
   END IF;
-  INSERT INTO public.party_members (party_id, user_id) VALUES (party_id, auth.uid());
+  INSERT INTO public.party_members (party_id, user_id) VALUES (p_party_id, auth.uid());
   -- Update current status if now full
   IF v_current + 1 >= v_max - 1 THEN
-    UPDATE public.party_listings SET status = 'full' WHERE id = party_id;
+    UPDATE public.party_listings SET status = 'full' WHERE id = p_party_id;
   END IF;
   RETURN TRUE;
 END;
@@ -154,19 +154,19 @@ GRANT EXECUTE ON FUNCTION public.join_party(BIGINT) TO authenticated;
 -- RPC: leave_party
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-CREATE OR REPLACE FUNCTION public.leave_party(party_id BIGINT)
+CREATE OR REPLACE FUNCTION public.leave_party(p_party_id BIGINT)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
 AS $$
 BEGIN
-  DELETE FROM public.party_members WHERE party_id = leave_party.party_id AND user_id = auth.uid();
+  DELETE FROM public.party_members WHERE party_id = p_party_id AND user_id = auth.uid();
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Not a member';
   END IF;
   -- Re-open if was full
-  UPDATE public.party_listings SET status = 'open' WHERE id = party_id AND status = 'full';
+  UPDATE public.party_listings SET status = 'open' WHERE id = p_party_id AND status = 'full';
   RETURN TRUE;
 END;
 $$;
