@@ -5,6 +5,7 @@ import 'package:squall/core/theme/effects.dart';
 import 'package:squall/core/supabase_service.dart';
 import 'package:squall/shared/widgets/squall_button.dart';
 import 'package:squall/features/servers/presentation/channel_list_panel.dart';
+import 'package:squall/features/servers/presentation/member_list_panel.dart';
 import 'package:squall/features/servers/presentation/text_channel_view.dart';
 import 'package:squall/features/servers/presentation/voice_channel_view.dart';
 
@@ -37,6 +38,30 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  List<Map<String, dynamic>> _members = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMembers();
+  }
+
+  @override
+  void didUpdateWidget(HomeScreen old) {
+    super.didUpdateWidget(old);
+    if (old.selectedServer?['id'] != widget.selectedServer?['id']) {
+      _loadMembers();
+    }
+  }
+
+  Future<void> _loadMembers() async {
+    final serverId = widget.selectedServer?['id'];
+    if (serverId == null) return;
+    try {
+      final members = await SupabaseService.getServerMembers(serverId as int);
+      if (mounted) setState(() => _members = members);
+    } catch (_) {}
+  }
   void _showCreateServerDialog() {
     final ctrl = TextEditingController();
     showDialog(context: context, builder: (ctx) => AlertDialog(
@@ -295,6 +320,8 @@ class _HomeScreenState extends State<HomeScreen> {
               SizedBox(width: 200, child: SquallButton(label: 'Create Channel', onPressed: _showCreateChannelDialog, primary: false)),
             ]))
           : _channelContent()),
+      // Member list panel (right side, like Discord)
+      MemberListPanel(members: _members),
     ]);
   }
 

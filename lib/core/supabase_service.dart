@@ -62,6 +62,14 @@ class SupabaseService {
     return List<Map<String, dynamic>>.from(response);
   }
 
+  static Future<List<Map<String, dynamic>>> getServerMembers(int serverId) async {
+    final response = await client
+        .from('server_members')
+        .select('*, profile:profiles!user_id(id, username, display_name, avatar_url, status)')
+        .eq('server_id', serverId);
+    return List<Map<String, dynamic>>.from(response);
+  }
+
   // --- Messages ---
   static Future<List<Map<String, dynamic>>> getMessages(int channelId) async {
     final response = await client

@@ -6,7 +6,7 @@ const LIVEKIT_URL = Deno.env.get("LIVEKIT_URL")!;
 const LIVEKIT_API_KEY = Deno.env.get("LIVEKIT_API_KEY")!;
 const LIVEKIT_API_SECRET = Deno.env.get("LIVEKIT_API_SECRET")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,7 +21,7 @@ serve(async (req) => {
   const authHeader = req.headers.get("authorization")?.replace("Bearer ", "");
   if (!authHeader) return new Response(JSON.stringify({ error: "Missing authorization" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
   const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader);
   if (authError || !user) return new Response(JSON.stringify({ error: "Invalid or expired token" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
