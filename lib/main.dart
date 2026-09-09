@@ -4,10 +4,14 @@ import 'package:squall/app.dart';
 import 'package:squall/core/supabase_config.dart';
 import 'package:squall/core/fullscreen_service.dart';
 import 'package:squall/core/settings/settings_provider.dart';
+import 'package:squall/core/settings/persistence.dart';
 import 'package:window_manager/window_manager.dart' show windowManager;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load persisted settings before creating providers.
+  try { await initSettingsStorage(); } catch (_) {}
 
   if (!SupabaseConfig.isConfigured) {
     runApp(const SquallApp());

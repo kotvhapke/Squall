@@ -17,3 +17,5 @@ class WebPersistence extends SettingsPersistence {
 }
 
 SettingsPersistence createSettingsPersistence() => WebPersistence();
+
+Future<void> initSettingsStorage() async {}

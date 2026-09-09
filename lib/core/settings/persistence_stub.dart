@@ -12,3 +12,5 @@ class MemoryPersistence extends SettingsPersistence {
 }
 
 SettingsPersistence createSettingsPersistence() => MemoryPersistence();
+
+Future<void> initSettingsStorage() async {}
