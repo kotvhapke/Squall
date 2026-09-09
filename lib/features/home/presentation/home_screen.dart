@@ -6,6 +6,7 @@ import 'package:squall/core/supabase_service.dart';
 import 'package:squall/shared/widgets/squall_button.dart';
 import 'package:squall/features/servers/presentation/channel_list_panel.dart';
 import 'package:squall/features/servers/presentation/member_list_panel.dart';
+import 'package:squall/features/servers/presentation/server_settings_screen.dart';
 import 'package:squall/features/servers/presentation/text_channel_view.dart';
 import 'package:squall/features/servers/presentation/voice_channel_view.dart';
 
@@ -214,6 +215,7 @@ class _HomeScreenState extends State<HomeScreen> {
         side: const BorderSide(color: AppColors.border),
       ),
       items: [
+        _menuItemPopup(Icons.settings_outlined, 'Server Settings', 'settings'),
         _menuItemPopup(Icons.link, 'Create Invite', 'invite'),
         _menuItemPopup(Icons.add, 'Create Channel', 'channel'),
         if (widget.selectedServer!['owner_id'] == SupabaseService.userId)
@@ -221,7 +223,13 @@ class _HomeScreenState extends State<HomeScreen> {
         _menuItemPopup(Icons.logout, 'Leave Server', 'leave'),
       ],
     ).then((value) async {
-      if (value == 'invite') {
+      if (value == 'settings') {
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => ServerSettingsScreen(
+          serverId: widget.selectedServer!['id'] as int,
+          serverName: widget.selectedServer!['name'] as String? ?? '',
+          ownerId: widget.selectedServer!['owner_id'] as String?,
+        )));
+      } else if (value == 'invite') {
         try {
           final result = await SupabaseService.createInvite(widget.selectedServer!['id'] as int, 0, null);
           final code = result['code'] as String;

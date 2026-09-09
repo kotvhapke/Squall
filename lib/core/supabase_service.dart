@@ -70,6 +70,30 @@ class SupabaseService {
     return List<Map<String, dynamic>>.from(response);
   }
 
+  static Future<void> setMemberRole(int serverId, String userId, String role) async {
+    await client.rpc('set_member_role', params: {
+      'target_server_id': serverId,
+      'target_user_id': userId,
+      'new_role': role,
+    });
+  }
+
+  static Future<void> transferOwnership(int serverId, String newOwnerId) async {
+    await client.rpc('transfer_server_ownership', params: {
+      'target_server_id': serverId,
+      'new_owner_id': newOwnerId,
+    });
+  }
+
+  static Future<Map<String, dynamic>> getServer(int serverId) async {
+    final response = await client.from('servers').select().eq('id', serverId).single();
+    return Map<String, dynamic>.from(response);
+  }
+
+  static Future<void> renameServer(int serverId, String name) async {
+    await client.from('servers').update({'name': name}).eq('id', serverId);
+  }
+
   // --- Messages ---
   static Future<List<Map<String, dynamic>>> getMessages(int channelId) async {
     final response = await client
