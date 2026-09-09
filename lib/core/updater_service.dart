@@ -16,17 +16,17 @@ class UpdateInfo {
 /// Self-updater for Squall.
 ///
 /// On Windows the running .exe cannot be overwritten while it is running, so we:
-///   1. download the ZIP into the install dir,
-///   2. write a small update.bat that copies the new files over the app and
-///      relaunches it,
-///   3. tell the caller to exit the app — the bat takes over.
+///   1. download the ZIP into a temp staging dir,
+///   2. extract it in Dart and stage all new files next to the exe,
+///   3. write a tiny relaunch.bat that (after the app exits) copies staged files
+///      over the running install and starts the new exe.
 ///
 /// On web this only reports the update (no self-replace possible).
 class UpdaterService {
   static const repo = 'https://api.github.com/repos/kotvhapke/Squall/releases/latest';
   static const _assetName = 'squall-windows.zip';
 
-  static Future<UpdateInfo> checkForUpdate({String currentVersion = '1.1.4'}) async {
+  static Future<UpdateInfo> checkForUpdate({String currentVersion = '1.1.6'}) async {
     try {
       final res = await http.get(Uri.parse(repo), headers: {'Accept': 'application/vnd.github+json'});
       if (res.statusCode != 200) {
@@ -63,14 +63,13 @@ class UpdaterService {
     return false;
   }
 
-  /// Downloads the ZIP, stages it next to the exe and prepares a relaunch script.
-  /// Returns the path of the update.bat that must be executed AFTER the app exits.
+  /// Downloads the ZIP, extracts and stages new files, returns a relaunch bat path.
   static Future<String> prepareUpdate(String url, {required void Function(double) onProgress}) async {
     if (kIsWeb) {
       throw UnsupportedError('Web cannot self-update. Use Ctrl+F5.');
     }
     final installDir = File(Platform.resolvedExecutable).parent;
-    final zipPath = '${installDir.path}\\squall-update.zip';
+    final zipBytes = <int>[];
 
     final request = http.Request('GET', Uri.parse(url));
     final response = await request.send();
@@ -78,36 +77,52 @@ class UpdaterService {
       throw Exception('Download failed (${response.statusCode})');
     }
     final total = response.contentLength ?? 0;
-    final bytes = <int>[];
     await response.stream.forEach((chunk) {
-      bytes.addAll(chunk);
-      if (total > 0) {
-        onProgress(bytes.length / total);
-      }
+      zipBytes.addAll(chunk);
+      if (total > 0) onProgress(zipBytes.length / total);
     });
-    File(zipPath).writeAsBytesSync(bytes, flush: true);
 
-    final exePath = Platform.resolvedExecutable;
-    final exeName = exePath.split('\\').last;
-    final batPath = '${installDir.path}\\squall-update.bat';
+    // Stage dir for the extracted zip
+    final staging = Directory('${installDir.path}\\squall-update-staging');
+    if (staging.existsSync()) staging.deleteSync(recursive: true);
+    staging.createSync(recursive: true);
+
+    final archive = ZipDecoder().decodeBytes(zipBytes);
+    for (final f in archive.files) {
+      if (!f.isFile) continue;
+      final name = f.name.replaceAll('\\', '/');
+      final safe = name.contains('..') ? name.split('/').where((s) => s != '..').join('/') : name;
+      final out = File('${staging.path}\\$safe');
+      out.parent.createSync(recursive: true);
+      out.writeAsBytesSync(f.content, flush: true);
+    }
+
+    // Locate squall.exe inside staging (may be nested)
+    final exeName = Platform.resolvedExecutable.split('\\').last;
+    final foundExe = _findFile(staging.path, exeName) ?? _findFile(staging.path, 'squall.exe');
+    if (foundExe == null) {
+      staging.deleteSync(recursive: true);
+      throw Exception('Could not locate squall.exe in the downloaded archive');
+    }
+    final exeSourceDir = File(foundExe).parent;
+
+    // Write a relaunch bat. It runs AFTER the app exits: copies staged files
+    // over the current install dir, then starts the new exe, then cleans up.
+    final batPath = '${installDir.path}\\squall-relaunch.bat';
     final bat = '''
 @echo off
 setlocal
 cd /d "%~dp0"
-timeout /t 1 /nobreak >nul
-echo [!] Updating Squall... do not close this window.
+timeout /t 2 /nobreak >nul
 taskkill /f /im "$exeName" >nul 2>&1
 timeout /t 1 /nobreak >nul
-if exist squall.exe del /f /q squall.exe
-if exist *.dll del /f /q *.dll >nul 2>&1
-if exist data rmdir /s /q data
-powershell -NoProfile -Command "Expand-Archive -Path '%~dp0squall-update.zip' -DestinationPath '%~dp0' -Force" >nul 2>&1
-if not exist squall.exe (
-  powershell -NoProfile -Command "Expand-Archive -Path '%~dp0squall-update.zip' -DestinationPath '%~dp0release' -Force" >nul 2>&1
-  if exist "%~dp0release\\$exeName" copy /y "%~dp0release\\$exeName" "%~dp0$exeName" >nul
-)
-del /f /q "%~dp0squall-update.zip" >nul 2>&1
-del /f /q "%~dp0squall-update.bat" >nul 2>&1
+echo [!] Installing Squall update...
+if exist "%~dp0squall.exe" del /f /q "%~dp0squall.exe"
+if exist "%~dp0data" rmdir /s /q "%~dp0data"
+copy /y "$exeSourceDir\\$exeName" "%~dp0$exeName" >nul 2>&1
+for /r "$exeSourceDir" %%f in (*.dll) do copy /y "%%f" "%~dp0" >nul 2>&1
+if exist "$exeSourceDir\\data" xcopy /e /i /q /y "$exeSourceDir\\data" "%~dp0data\\" >nul 2>&1
+if exist "%~dp0squall-update-staging" rmdir /s /q "%~dp0squall-update-staging"
 echo [!] Done. Launching Squall...
 start "" "%~dp0$exeName"
 exit
@@ -116,9 +131,18 @@ exit
     return batPath;
   }
 
-  /// Runs the update script detached (returns immediately).
+  static String? _findFile(String dir, String name) {
+    try {
+      for (final e in Directory(dir).listSync(recursive: true)) {
+        if (e is File && e.path.split(Platform.pathSeparator).last == name) {
+          return e.path;
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
   static void runAndExit(String batPath) {
     Process.start('cmd', ['/c', 'start', '', batPath]);
-    // Caller should now exit the app.
   }
 }
