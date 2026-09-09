@@ -294,7 +294,7 @@ class SupabaseService {
   static Future<List<Map<String, dynamic>>> getPendingRequests() async {
     final response = await client
         .from('friend_requests')
-        .select('*, sender:sender_id(id, username, display_name, avatar_url, status)')
+        .select('*, sender:profiles!sender_id(id, username, display_name, avatar_url, status)')
         .or('sender_id.eq.$userId,receiver_id.eq.$userId')
         .eq('status', 'pending');
     return List<Map<String, dynamic>>.from(response);
