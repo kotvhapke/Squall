@@ -551,11 +551,11 @@ class SupabaseService {
   }
 
   static Future<void> joinParty(int partyId) async {
-    await client.rpc('join_party', params: {'party_id': partyId});
+    await client.rpc('join_party', params: {'p_party_id': partyId});
   }
 
   static Future<void> leaveParty(int partyId) async {
-    await client.rpc('leave_party', params: {'party_id': partyId});
+    await client.rpc('leave_party', params: {'p_party_id': partyId});
   }
 
   static Future<Map<String, dynamic>> getPartyWithMembers(int partyId) async {
