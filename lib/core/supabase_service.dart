@@ -304,10 +304,29 @@ class SupabaseService {
     if (targetId == userId) throw Exception('Cannot add yourself');
     final blocked = await isBlocked(targetId);
     if (blocked) throw Exception('Cannot send request');
-    await client.from('friend_requests').insert({
-      'sender_id': userId,
-      'receiver_id': targetId,
-    });
+    try {
+      await client.from('friend_requests').insert({
+        'sender_id': userId,
+        'receiver_id': targetId,
+      });
+    } on PostgrestException catch (e) {
+      if (e.code == '23505') {
+        throw Exception('Request already sent');
+      }
+      rethrow;
+    }
+  }
+
+  static RealtimeChannel subscribeFriendRequests(void Function() onEvent) {
+    final channel = client.channel('friend-requests');
+    channel.onPostgresChanges(
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'friend_requests',
+      callback: (_) => onEvent(),
+    );
+    channel.subscribe();
+    return channel;
   }
 
   static Future<void> respondToRequest(int requestId, String status) async {

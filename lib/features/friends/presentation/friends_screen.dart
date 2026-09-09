@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:squall/core/theme/app_colors.dart';
 import 'package:squall/core/supabase_service.dart';
 import 'package:squall/features/dms/presentation/messages_screen.dart';
@@ -18,12 +19,23 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
   List<Map<String, dynamic>> _pending = [];
   List<Map<String, dynamic>> _blocked = [];
   bool _loading = true;
+  RealtimeChannel? _realtime;
 
   @override
   void initState() {
     super.initState();
     _tabCtrl = TabController(length: 4, vsync: this);
     _load();
+    _realtime = SupabaseService.subscribeFriendRequests(() {
+      if (mounted) _load();
+    });
+  }
+
+  @override
+  void dispose() {
+    _realtime?.unsubscribe();
+    _tabCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -73,9 +85,6 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
       ),
     ));
   }
-
-  @override
-  void dispose() { _tabCtrl.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
