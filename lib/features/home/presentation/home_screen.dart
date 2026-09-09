@@ -198,57 +198,75 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showServerMenu() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.darkBlue,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (ctx) => SafeArea(child: Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Column(mainAxisSize: MainAxisSize.min, children: [
-        _menuItem(Icons.link, 'Create Invite', () async {
-          Navigator.pop(ctx);
-          try {
-            final result = await SupabaseService.createInvite(widget.selectedServer!['id'] as int, 0, null);
-            final code = result['code'] as String;
-            if (mounted) { Clipboard.setData(ClipboardData(text: code)); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Invite copied: $code'))); }
-          } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'))); }
-        }),
-        _menuItem(Icons.add, 'Create Channel', () { Navigator.pop(ctx); _showCreateChannelDialog(); }),
-        if (widget.selectedServer!['owner_id'] == SupabaseService.userId)
-          _menuItem(Icons.delete_forever, 'Delete Server', () async {
-            Navigator.pop(ctx);
-            final confirm = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
-              backgroundColor: AppColors.darkBlue,
-              title: const Text('Delete Server?', style: TextStyle(color: AppColors.danger)),
-              content: Text('This cannot be undone.', style: const TextStyle(color: AppColors.textSecondary)),
-              actions: [
-                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted))),
-                TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: AppColors.danger))),
-              ],
-            ));
-            if (confirm == true) {
-              try {
-                await SupabaseService.deleteServer(widget.selectedServer!['id'] as int);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Server deleted')));
-                  widget.onBack?.call();
-                }
-              } catch (e) {
-                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete: $e')));
-              }
-            }
-          }, iconColor: AppColors.danger),
-        _menuItem(Icons.logout, 'Leave Server', () async {
-          Navigator.pop(ctx);
-          try { await SupabaseService.leaveServer(widget.selectedServer!['id'] as int); widget.onReload?.call(); }
-          catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'))); }
-        }),
-      ]))),
+    final RenderBox box = context.findRenderObject() as RenderBox;
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final pos = RelativeRect.fromRect(
+      Rect.fromLTWH(80, 72, 24, 24),
+      Offset.zero & overlay.size,
     );
+
+    showMenu<String>(
+      context: context,
+      position: pos,
+      color: AppColors.darkBlue,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      items: [
+        _menuItemPopup(Icons.link, 'Create Invite', 'invite'),
+        _menuItemPopup(Icons.add, 'Create Channel', 'channel'),
+        if (widget.selectedServer!['owner_id'] == SupabaseService.userId)
+          _menuItemPopup(Icons.delete_forever, 'Delete Server', 'delete', color: AppColors.danger),
+        _menuItemPopup(Icons.logout, 'Leave Server', 'leave'),
+      ],
+    ).then((value) async {
+      if (value == 'invite') {
+        try {
+          final result = await SupabaseService.createInvite(widget.selectedServer!['id'] as int, 0, null);
+          final code = result['code'] as String;
+          if (mounted) { Clipboard.setData(ClipboardData(text: code)); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Invite copied: $code'))); }
+        } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'))); }
+      } else if (value == 'channel') {
+        _showCreateChannelDialog();
+      } else if (value == 'delete') {
+        final confirm = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+          backgroundColor: AppColors.darkBlue,
+          title: const Text('Delete Server?', style: TextStyle(color: AppColors.danger)),
+          content: Text('This cannot be undone.', style: const TextStyle(color: AppColors.textSecondary)),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted))),
+            TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: AppColors.danger))),
+          ],
+        ));
+        if (confirm == true) {
+          try {
+            await SupabaseService.deleteServer(widget.selectedServer!['id'] as int);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Server deleted')));
+              widget.onBack?.call();
+            }
+          } catch (e) {
+            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete: $e')));
+          }
+        }
+      } else if (value == 'leave') {
+        try { await SupabaseService.leaveServer(widget.selectedServer!['id'] as int); widget.onReload?.call(); }
+        catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'))); }
+      }
+    });
   }
 
-  Widget _menuItem(IconData icon, String label, VoidCallback onTap, {Color? iconColor}) => Column(mainAxisSize: MainAxisSize.min, children: [
-    ListTile(leading: Icon(icon, color: iconColor ?? AppColors.textSecondary, size: 20), title: Text(label, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14)), onTap: onTap, dense: true),
-    const Divider(height: 1, color: AppColors.border),
-  ]);
+  PopupMenuItem<String> _menuItemPopup(IconData icon, String label, String value, {Color? color}) {
+    return PopupMenuItem<String>(
+      value: value,
+      child: Row(children: [
+        Icon(icon, color: color ?? AppColors.textSecondary, size: 18),
+        const SizedBox(width: 10),
+        Text(label, style: TextStyle(color: color ?? AppColors.textPrimary, fontSize: 14)),
+      ]),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

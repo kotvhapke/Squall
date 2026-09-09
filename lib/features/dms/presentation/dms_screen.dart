@@ -361,7 +361,7 @@ class _DmChatScreenState extends State<_DmChatScreen> {
         mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
           if (!isMe) ...[
-            SquallAvatar(name: author['display_name'] ?? author['username'] ?? '?', size: 28),
+            SquallAvatar(name: author['display_name'] ?? author['username'] ?? '?', size: 28, avatarUrl: author['avatar_url'] as String?),
             const SizedBox(width: 8),
           ],
           Flexible(

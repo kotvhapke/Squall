@@ -311,7 +311,7 @@ class _DmChatState extends State<_DmChat> {
           if (!isMe) ...[
             Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: SquallAvatar(name: author['display_name'] ?? author['username'] ?? '?', size: 28),
+              child: SquallAvatar(name: author['display_name'] ?? author['username'] ?? '?', size: 28, avatarUrl: author['avatar_url'] as String?),
             ),
             const SizedBox(width: 8),
           ],

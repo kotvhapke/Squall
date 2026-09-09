@@ -28,6 +28,7 @@ class Translations {
     'Account': 'Аккаунт', 'Language': 'Язык',
     'Reduced Effects': 'Упрощённые эффекты',
     'Show Online Only': 'Только онлайн',
+    'Fullscreen Mode': 'Полноэкранный режим',
     'Sound on Notification': 'Звук уведомлений',
     'Master Volume': 'Громкость', 'Mic Sensitivity': 'Чувствительность микрофона',
     'Push to Talk': 'Push to Talk',

@@ -138,7 +138,7 @@ class _TextChannelViewState extends State<TextChannelView> {
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: SquallAvatar(name: author['display_name'] ?? author['username'] ?? '?', size: 36),
+            child: SquallAvatar(name: author['display_name'] ?? author['username'] ?? '?', size: 36, avatarUrl: author['avatar_url'] as String?),
           ),
           const SizedBox(width: 10),
           Expanded(

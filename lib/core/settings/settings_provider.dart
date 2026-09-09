@@ -15,6 +15,7 @@ class SettingsProvider extends ChangeNotifier {
   double _fogIntensity = 50;
   double _arcIntensity = 50;
   String _glowColor = 'electricBlue';
+  bool _isFullscreen = false;
 
   bool get reducedEffects => _reducedEffects;
   Locale get locale => _locale;
@@ -27,6 +28,7 @@ class SettingsProvider extends ChangeNotifier {
   double get fogIntensity => _fogIntensity;
   double get arcIntensity => _arcIntensity;
   String get glowColor => _glowColor;
+  bool get isFullscreen => _isFullscreen;
 
   SettingsProvider({SettingsPersistence? store})
       : _store = store ?? createSettingsPersistence(),
@@ -47,6 +49,7 @@ class SettingsProvider extends ChangeNotifier {
     _fogIntensity = double.tryParse(_store.get('squall_fog') ?? '') ?? 50;
     _arcIntensity = double.tryParse(_store.get('squall_arc') ?? '') ?? 50;
     _glowColor = _store.get('squall_glow_color') ?? 'electricBlue';
+    _isFullscreen = _store.get('squall_fullscreen') == 'true';
   }
 
   void setReducedEffects(bool value) {
@@ -117,6 +120,14 @@ class SettingsProvider extends ChangeNotifier {
     _glowColor = value;
     _store.set('squall_glow_color', value);
     notifyListeners();
+  }
+
+  void setFullscreen(bool value) {
+    if (_isFullscreen != value) {
+      _isFullscreen = value;
+      _store.set('squall_fullscreen', value.toString());
+      notifyListeners();
+    }
   }
 
   Color get selectedGlowColor {

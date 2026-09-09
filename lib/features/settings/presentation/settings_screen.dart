@@ -6,6 +6,7 @@ import 'package:squall/core/theme/app_colors.dart';
 import 'package:squall/core/settings/settings_provider.dart';
 import 'package:squall/core/translations.dart';
 import 'package:squall/core/updater_service.dart';
+import 'package:squall/core/fullscreen_service.dart';
 import 'package:squall/shared/widgets/squall_back_button.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -49,6 +50,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 12),
                 _toggleTile('Reduced Effects'.t(context), reduced, (v) => s.setReducedEffects(v)),
                 _toggleTile('Show Online Only'.t(context), context.select<SettingsProvider, bool>((s) => s.showOnlineOnly), (v) => s.setShowOnlineOnly(v)),
+                _toggleTile('Fullscreen Mode'.t(context), context.select<SettingsProvider, bool>((s) => s.isFullscreen), (v) async {
+                  s.setFullscreen(v);
+                  await FullscreenService.apply(v);
+                }),
                 const SizedBox(height: 16),
                 _section('Background Effects'.t(context)),
                 const SizedBox(height: 4),
