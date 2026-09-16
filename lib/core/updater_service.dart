@@ -23,7 +23,7 @@ class UpdateInfo {
 ///
 /// On web this only reports the update (no self-replace possible).
 /// Текущая версия приложения. Держать в синхроне с version в pubspec.yaml.
-const String kSquallVersion = '1.3.3';
+const String kSquallVersion = '1.3.4';
 
 class UpdaterService {
   static const repo = 'https://api.github.com/repos/kotvhapke/Squall/releases/latest';
@@ -109,10 +109,13 @@ class UpdaterService {
       staging.deleteSync(recursive: true);
       throw Exception('Could not locate squall.exe in the downloaded archive');
     }
-    final exeSourceDir = File(foundExe).parent;
+    final exeSourceDir = File(foundExe).parent.path;
 
     // Write a relaunch bat. It runs AFTER the app exits: copies staged files
     // over the current install dir, then starts the new exe.
+    // NOTE: все пути в bat берутся из .path (а не из Directory.toString()),
+    // иначе получается мусор вида "Directory: '...'". Пробелы в путях
+    // обрабатываются через кавычки + pushd (for /r не умеет кавычки в пути).
     final batPath = '${installDir.path}\\squall-relaunch.bat';
     final bat = '''
 @echo off
@@ -122,13 +125,14 @@ timeout /t 2 /nobreak >nul
 taskkill /f /im "$exeName" >nul 2>&1
 timeout /t 1 /nobreak >nul
 echo [!] Installing Squall update...
+set "SRCDIR=$exeSourceDir"
 :: Copy new exe first (only remove old if copy succeeded)
-if not exist "$exeSourceDir\\$exeName" (
+if not exist "%SRCDIR%\\$exeName" (
   echo [!] New exe not found in staging. Aborting.
   pause
   exit /b 1
 )
-copy /y "$exeSourceDir\\$exeName" "%~dp0$exeName" >nul 2>&1
+copy /y "%SRCDIR%\\$exeName" "%~dp0$exeName" >nul 2>&1
 if not exist "%~dp0$exeName" (
   echo [!] Failed to copy new exe. Aborting.
   pause
@@ -136,11 +140,13 @@ if not exist "%~dp0$exeName" (
 )
 :: Remove old data and copy the new one fully (app.so included)
 if exist "%~dp0data" rmdir /s /q "%~dp0data"
-if exist "$exeSourceDir\\data" (
-  robocopy "$exeSourceDir\\data" "%~dp0data" /E /MIR /NFL /NDL /NJH /NJS >nul 2>&1
+if exist "%SRCDIR%\\data" (
+  robocopy "%SRCDIR%\\data" "%~dp0data" /E /MIR /NFL /NDL /NJH /NJS >nul 2>&1
 )
-:: Copy any dlls
-for /r "$exeSourceDir" %%f in (*.dll) do copy /y "%%f" "%~dp0" >nul 2>&1
+:: Copy any dlls (pushd handles spaces in path)
+pushd "%SRCDIR%"
+for /r %%f in (*.dll) do copy /y "%%f" "%~dp0" >nul 2>&1
+popd
 :: Clean up staging
 if exist "%~dp0squall-update-staging" rmdir /s /q "%~dp0squall-update-staging"
 echo [!] Done. Launching Squall...
