@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:squall/core/theme/app_colors.dart';
 import 'package:squall/core/supabase_service.dart';
+import 'package:squall/features/party_finder/presentation/party_room.dart';
 import 'package:squall/shared/widgets/squall_button.dart';
 import 'package:squall/shared/widgets/states.dart';
 
@@ -13,9 +14,9 @@ class PartyFinderScreen extends StatefulWidget {
 
 class _PartyFinderScreenState extends State<PartyFinderScreen> {
   List<Map<String, dynamic>> _parties = [];
+  List<Map<String, dynamic>> _myParties = [];
   bool _loading = true;
 
-  // Filters
   String? _filterGame;
   String _filterMode = '';
   String _filterPlatform = '';
@@ -34,15 +35,31 @@ class _PartyFinderScreenState extends State<PartyFinderScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final data = await SupabaseService.searchParties(
-        game: _filterGame,
-        mode: _filterMode.isEmpty ? null : _filterMode,
-        platform: _filterPlatform.isEmpty ? null : _filterPlatform,
-        minRank: _filterRank.isEmpty ? null : _filterRank,
-      );
-      if (mounted) setState(() => _parties = data);
-    } catch (_) {}
-    if (mounted) setState(() => _loading = false);
+      final results = await Future.wait([
+        SupabaseService.searchParties(
+          game: _filterGame,
+          mode: _filterMode.isEmpty ? null : _filterMode,
+          platform: _filterPlatform.isEmpty ? null : _filterPlatform,
+          minRank: _filterRank.isEmpty ? null : _filterRank,
+        ),
+        SupabaseService.getMyPartyMemberships(),
+      ]);
+      if (mounted) {
+        setState(() {
+          _parties = List<Map<String, dynamic>>.from(results[0]);
+          _myParties = List<Map<String, dynamic>>.from(results[1]);
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _openMyFirstParty() {
+    if (_myParties.isEmpty) return;
+    final p = _myParties.first;
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => PartyRoom(partyId: p['id'] as int, game: p['game'] as String? ?? 'Game')));
   }
 
   void _showCreateDialog() {
@@ -100,7 +117,8 @@ class _PartyFinderScreenState extends State<PartyFinderScreen> {
                 mode: mode, platform: platform, minRank: rank,
                 maxPlayers: maxPlayers, description: descC.text.trim(),
               );
-              _load();
+              await _load();
+              if (_myParties.isNotEmpty) _openMyFirstParty();
             } catch (e) {
               if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
             }
@@ -151,11 +169,12 @@ class _PartyFinderScreenState extends State<PartyFinderScreen> {
     ));
   }
 
-  Future<void> _joinParty(int partyId) async {
+  Future<void> _joinParty(int partyId, String game) async {
     try {
       await SupabaseService.joinParty(partyId);
-      _load();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Joined party!')));
+      if (mounted) {
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => PartyRoom(partyId: partyId, game: game)));
+      }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     }
@@ -214,22 +233,56 @@ class _PartyFinderScreenState extends State<PartyFinderScreen> {
       Expanded(
         child: _loading
             ? const LoadingState()
-            : _parties.isEmpty
-                ? const EmptyState(icon: Icons.groups_outlined, title: 'No parties found', subtitle: 'Create one or adjust filters')
-                : RefreshIndicator(
-                    onRefresh: _load,
-                    color: AppColors.electricBlue,
-                    child: ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _parties.length,
-                      itemBuilder: (_, i) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _partyCard(_parties[i]),
+            : _myParties.isNotEmpty
+                ? _myPartyBanner()
+                : _parties.isEmpty
+                    ? const EmptyState(icon: Icons.groups_outlined, title: 'No parties found', subtitle: 'Create one or adjust filters')
+                    : RefreshIndicator(
+                        onRefresh: _load,
+                        color: AppColors.electricBlue,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _parties.length,
+                          itemBuilder: (_, i) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _partyCard(_parties[i]),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
       ),
     ]);
+  }
+
+  Widget _myPartyBanner() {
+    final p = _myParties.first;
+    final game = p['game'] as String? ?? 'Game';
+    final status = p['status'] as String? ?? 'open';
+    return GestureDetector(
+      onTap: _openMyFirstParty,
+      child: Container(
+        margin: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.blue.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.electricBlue.withValues(alpha: 0.3)),
+        ),
+        child: Row(children: [
+          Container(
+            width: 48, height: 48,
+            decoration: BoxDecoration(color: AppColors.serverIconBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.border)),
+            alignment: Alignment.center,
+            child: Text(game[0].toUpperCase(), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.electricBlue)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(game, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+            Text('Status: $status · Tap to open', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+          ])),
+          const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.electricBlue),
+        ]),
+      ),
+    );
   }
 
   Widget _header() {
@@ -313,13 +366,13 @@ class _PartyFinderScreenState extends State<PartyFinderScreen> {
           const SizedBox(width: 6),
           Text('$status · $memberCount/$maxPlayers', style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
           const Spacer(),
-          if (status == 'open')
-            isOwn
-                ? SizedBox(width: 80, child: SquallButton(label: 'Cancel', onPressed: () async {
-                    await SupabaseService.cancelParty(id);
-                    _load();
-                  }, primary: false, height: 36))
-                : SizedBox(width: 80, child: SquallButton(label: 'Join', onPressed: () => _joinParty(id), primary: true, height: 36)),
+          if (isOwn)
+            SizedBox(width: 80, child: SquallButton(label: 'Cancel', onPressed: () async {
+              await SupabaseService.cancelParty(id);
+              _load();
+            }, primary: false, height: 36))
+          else if (status == 'open')
+            SizedBox(width: 80, child: SquallButton(label: 'Join', onPressed: () => _joinParty(id, game), primary: true, height: 36)),
         ]),
       ]),
     );

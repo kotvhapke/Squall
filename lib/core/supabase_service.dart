@@ -610,6 +610,31 @@ class SupabaseService {
   static Future<void> cancelParty(int partyId) async {
     await client.from('party_listings').update({'status': 'cancelled'}).eq('id', partyId).eq('leader_id', userId);
   }
+
+  // --- Party Room ---
+
+  static Future<List<Map<String, dynamic>>> getMyPartyMemberships() async {
+    final response = await client.rpc('get_my_party_memberships');
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  static Future<List<Map<String, dynamic>>> getPartyMessages(int partyId) async {
+    final response = await client.rpc('get_party_messages', params: {'p_party_id': partyId});
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  static Future<Map<String, dynamic>?> sendPartyMessage(int partyId, String content) async {
+    final response = await client.rpc('send_party_message', params: {
+      'p_party_id': partyId,
+      'p_content': content,
+    }).maybeSingle();
+    return response != null ? Map<String, dynamic>.from(response) : null;
+  }
+
+  static Future<List<Map<String, dynamic>>> getPartyMembersWithProfiles(int partyId) async {
+    final response = await client.rpc('get_party_members_with_profiles', params: {'p_party_id': partyId});
+    return List<Map<String, dynamic>>.from(response);
+  }
 }
 
 String get livekitUrl => SupabaseConfig.livekitUrl;
