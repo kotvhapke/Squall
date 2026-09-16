@@ -93,9 +93,13 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> with Single
             labelColor: AppColors.electricBlue,
             unselectedLabelColor: AppColors.textMuted,
             labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-            tabs: const [
-              Tab(text: 'Overview'), Tab(text: 'Roles'), Tab(text: 'Members'),
-            ],
+            tabs: _isOwner
+                ? const [
+                    Tab(text: 'Overview'), Tab(text: 'Roles'), Tab(text: 'Members'),
+                  ]
+                : const [
+                    Tab(text: 'Overview'), Tab(text: 'Members'),
+                  ],
           ),
         ),
         Expanded(

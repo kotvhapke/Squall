@@ -46,7 +46,7 @@ class _StormCloudPreviewState extends State<StormCloudPreview> with SingleTicker
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: 5,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
               itemBuilder: (_, i) {
                 if (i == 3) return _actionCard('Create Server', Icons.add);
                 if (i == 4) return _actionCard('Join', Icons.login);

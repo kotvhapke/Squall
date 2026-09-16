@@ -196,7 +196,7 @@ class _DmChatState extends State<_DmChat> {
 
   void _startCall(String type) async {
     final roomName = 'dm_${widget.conversationId}';
-    final callId = await SupabaseService.createCallSession(roomName, null, null, widget.conversationId, type);
+    final callId = await SupabaseService.createCallSession(roomName, null, null, widget.conversationId);
     await SupabaseService.joinCall(callId);
     if (mounted) {
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => CallRoom(

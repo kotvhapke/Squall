@@ -44,8 +44,8 @@ class StormCloudShape {
     final offsetX = bounds.center.dx - ref.center.dx * scale;
     final offsetY = bounds.center.dy - ref.center.dy * scale;
     final matrix = Matrix4.identity()
-      ..translate(offsetX, offsetY)
-      ..scale(scale, scale);
+      ..translateByDouble(offsetX, offsetY, 0, 1)
+      ..scaleByDouble(scale, scale, 1, 1);
     return _buildNormalizedPath().transform(matrix.storage);
   }
 

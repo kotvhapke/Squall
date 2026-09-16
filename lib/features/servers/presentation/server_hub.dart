@@ -162,7 +162,7 @@ class _ServerHubState extends State<ServerHub> {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: 3,
-              separatorBuilder: (_, __) => SizedBox(width: 12),
+              separatorBuilder: (_, _) => SizedBox(width: 12),
               itemBuilder: (_, i) {
                 if (i == 0) return _actionCard('Create Server', Icons.add_circle_outline, 'Start your own community', _showCreateDialog);
                 if (i == 1) return _actionCard('Discover', Icons.explore_outlined, 'Find communities to join', () => setState(() => _showDiscover = true));
@@ -402,20 +402,46 @@ class _DiscoverListState extends State<_DiscoverList> {
               ],
             ),
           ),
-          TextButton(
-            onPressed: () async {
-              try {
-                final code = await SupabaseService.createInvite(s['id'] as int, 1, null);
-                await SupabaseService.joinServer(code['code'] as String);
-                widget.onJoin(s['id'] as int);
-              } catch (e) {
-                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
-              }
-            },
-            child: Text('Join', style: TextStyle(color: AppColors.electricBlue, fontSize: 12)),
-          ),
+          _JoinButton(server: s, onJoined: () => widget.onJoin(s['id'] as int)),
         ],
       ),
+    );
+  }
+}
+
+class _JoinButton extends StatefulWidget {
+  final Map<String, dynamic> server;
+  final VoidCallback onJoined;
+  const _JoinButton({required this.server, required this.onJoined});
+
+  @override
+  State<_JoinButton> createState() => _JoinButtonState();
+}
+
+class _JoinButtonState extends State<_JoinButton> {
+  bool _joining = false;
+
+  Future<void> _join() async {
+    if (_joining) return;
+    setState(() => _joining = true);
+    try {
+      await SupabaseService.joinPublicServer(widget.server['id'] as int);
+      if (mounted) widget.onJoined();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+        setState(() => _joining = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: _joining ? null : _join,
+      child: _joining
+          ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.electricBlue))
+          : const Text('Join', style: TextStyle(color: AppColors.electricBlue, fontSize: 12)),
     );
   }
 }

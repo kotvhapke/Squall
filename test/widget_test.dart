@@ -9,16 +9,16 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:squall/app.dart';
 import 'package:squall/core/settings/settings_provider.dart';
-import 'package:squall/core/settings/persistence.dart';
 
 void main() {
   testWidgets('Squall app shows branding', (WidgetTester tester) async {
-    final store = MemoryPersistence();
+    SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(
       ChangeNotifierProvider(
-        create: (_) => SettingsProvider(store: store),
+        create: (_) => SettingsProvider(),
         child: const SquallApp(),
       ),
     );

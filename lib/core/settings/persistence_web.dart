@@ -1,4 +1,4 @@
-import 'dart:html' as html;
+import 'package:web/web.dart' as web;
 
 abstract class SettingsPersistence {
   String? get(String key);
@@ -8,11 +8,11 @@ abstract class SettingsPersistence {
 class WebPersistence extends SettingsPersistence {
   @override
   String? get(String key) {
-    try { return html.window.localStorage[key]; } catch (_) { return null; }
+    try { return web.window.localStorage.getItem(key); } catch (_) { return null; }
   }
   @override
   void set(String key, String value) {
-    try { html.window.localStorage[key] = value; } catch (_) {}
+    try { web.window.localStorage.setItem(key, value); } catch (_) {}
   }
 }
 

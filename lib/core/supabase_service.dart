@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:squall/core/supabase_config.dart';
@@ -407,7 +406,7 @@ class SupabaseService {
   // --- Calls ---
 
   /// Finds an active (non-ended) call session for a room, or creates/reuses one idempotently.
-  static Future<int> findOrCreateCallSession(String roomName, int? serverId, int? channelId, int? conversationId, String callType) async {
+  static Future<int> findOrCreateCallSession(String roomName, int? serverId, int? channelId, int? conversationId) async {
     // 1. Look for an existing active session first — ended_at IS NULL means active
     final existing = await client
         .from('calls')
@@ -456,8 +455,8 @@ class SupabaseService {
     }
   }
 
-  static Future<int> createCallSession(String roomName, int? serverId, int? channelId, int? conversationId, String callType) async {
-    return findOrCreateCallSession(roomName, serverId, channelId, conversationId, callType);
+  static Future<int> createCallSession(String roomName, int? serverId, int? channelId, int? conversationId) async {
+    return findOrCreateCallSession(roomName, serverId, channelId, conversationId);
   }
 
   static Future<void> joinCall(int callId) async {
@@ -535,21 +534,42 @@ class SupabaseService {
     return data;
   }
 
+  static Future<int> joinPublicServer(int serverId) async {
+    final response = await client.rpc('join_public_server', params: {'target_server_id': serverId});
+    return response as int;
+  }
+
   // --- Party Finder ---
 
+  /// Returns parties with a member count for each listing.
   static Future<List<Map<String, dynamic>>> searchParties({
     String? game, String? mode, String? platform, String? minRank,
     int limit = 20, int offset = 0,
   }) async {
     final response = await client.rpc('search_parties', params: {
       if (game != null && game.isNotEmpty) 'p_game': game,
-      if (mode != null) 'p_mode': mode,
-      if (platform != null) 'p_platform': platform,
-      if (minRank != null) 'p_min_rank': minRank,
+      if (mode != null && mode.isNotEmpty) 'p_mode': mode,
+      if (platform != null && platform.isNotEmpty) 'p_platform': platform,
+      if (minRank != null && minRank.isNotEmpty) 'p_min_rank': minRank,
       'p_limit': limit,
       'p_offset': offset,
     });
-    return List<Map<String, dynamic>>.from(response);
+    final rows = List<Map<String, dynamic>>.from(response);
+    if (rows.isEmpty) return rows;
+    final ids = rows.map((r) => r['id'] as int).toList();
+    final counts = await client
+        .from('party_members')
+        .select('party_id')
+        .inFilter('party_id', ids);
+    final tally = <int, int>{};
+    for (final c in counts) {
+      final pid = c['party_id'] as int;
+      tally[pid] = (tally[pid] ?? 0) + 1;
+    }
+    return rows.map((r) {
+      final id = r['id'] as int;
+      return {...r, 'member_count': tally[id] ?? 0};
+    }).toList();
   }
 
   static Future<Map<String, dynamic>> createParty({

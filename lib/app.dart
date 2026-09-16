@@ -299,7 +299,7 @@ class _AppShellState extends State<AppShell> with TickerProviderStateMixin {
           child: _servers.isEmpty
               ? Text(_t('No servers yet'), style: const TextStyle(color: AppColors.textMuted))
               : ListView.separated(
-                  scrollDirection: Axis.horizontal, separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  scrollDirection: Axis.horizontal, separatorBuilder: (_, _) => const SizedBox(width: 12),
                   itemCount: _servers.length,
                   itemBuilder: (_, i) {
                     final s = _servers[i];

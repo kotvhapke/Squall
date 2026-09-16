@@ -5,6 +5,6 @@ import 'package:file_picker/file_picker.dart';
 /// or null if the user cancels. Works on all platforms.
 Future<Uint8List?> pickImageFile() async {
   final files = await FilePicker.pickFiles(type: FileType.image);
-  if (files == null || files.isEmpty) return null;
+  if (files.isEmpty) return null;
   return await files.first.readAsBytes();
 }

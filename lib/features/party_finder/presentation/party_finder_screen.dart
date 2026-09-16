@@ -271,6 +271,7 @@ class _PartyFinderScreenState extends State<PartyFinderScreen> {
     final platform = party['platform'] as String? ?? 'pc';
     final rank = party['min_rank'] as String? ?? 'bronze';
     final maxPlayers = party['max_players'] as int? ?? 4;
+    final memberCount = party['member_count'] as int? ?? 0;
     final desc = party['description'] as String? ?? '';
     final status = party['status'] as String? ?? 'open';
     final leaderId = party['leader_id'] as String?;
@@ -310,7 +311,7 @@ class _PartyFinderScreenState extends State<PartyFinderScreen> {
         Row(children: [
           const Icon(Icons.people_outline, size: 16, color: AppColors.textMuted),
           const SizedBox(width: 6),
-          Text('$status · ?/$maxPlayers', style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+          Text('$status · $memberCount/$maxPlayers', style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
           const Spacer(),
           if (status == 'open')
             isOwn

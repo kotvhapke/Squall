@@ -19,7 +19,6 @@ class VoiceChannelView extends StatefulWidget {
 class _VoiceChannelViewState extends State<VoiceChannelView> {
   bool _loading = false;
   bool _inCall = false;
-  Map<String, dynamic>? _activeCall;
   List<Map<String, dynamic>> _participants = [];
 
   @override
@@ -35,7 +34,6 @@ class _VoiceChannelViewState extends State<VoiceChannelView> {
         final p = await SupabaseService.getCallParticipants(call['id'] as int);
         if (mounted) {
           setState(() {
-            _activeCall = call;
             _participants = p;
             _inCall = true;
           });
@@ -61,7 +59,7 @@ class _VoiceChannelViewState extends State<VoiceChannelView> {
       if (chType != 'voice') { _showError('Channel type is "$chType", expected "voice"'); return; }
 
       final roomName = 'server_${widget.serverId}_channel_$chId';
-      final callId = await SupabaseService.findOrCreateCallSession(roomName, widget.serverId, chId, null, 'audio');
+      final callId = await SupabaseService.findOrCreateCallSession(roomName, widget.serverId, chId, null);
       await SupabaseService.joinCall(callId);
 
       if (!mounted) return;
@@ -123,11 +121,10 @@ class _VoiceChannelViewState extends State<VoiceChannelView> {
                   final name = profile?['display_name'] as String? ?? profile?['username'] as String? ?? 'User';
                   final avatar = profile?['avatar_url'] as String?;
                   final status = profile?['status'] as String? ?? 'online';
-                  final isSpeaking = p['muted'] == false;
                   return Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      SquallAvatar(name: name, avatarUrl: avatar, status: status, size: 48, isSpeaking: isSpeaking),
+                      SquallAvatar(name: name, avatarUrl: avatar, status: status, size: 48),
                       const SizedBox(height: 4),
                       Text(name.length > 12 ? '${name.substring(0, 10)}…' : name,
                           style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),

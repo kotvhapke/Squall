@@ -199,7 +199,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showServerMenu() {
-    final RenderBox box = context.findRenderObject() as RenderBox;
     final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
     final pos = RelativeRect.fromRect(
       Rect.fromLTWH(80, 72, 24, 24),
@@ -223,6 +222,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _menuItemPopup(Icons.logout, 'Leave Server', 'leave'),
       ],
     ).then((value) async {
+      if (!mounted) return;
       if (value == 'settings') {
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => ServerSettingsScreen(
           serverId: widget.selectedServer!['id'] as int,
@@ -238,6 +238,7 @@ class _HomeScreenState extends State<HomeScreen> {
       } else if (value == 'channel') {
         _showCreateChannelDialog();
       } else if (value == 'delete') {
+        if (!mounted) return;
         final confirm = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
           backgroundColor: AppColors.darkBlue,
           title: const Text('Delete Server?', style: TextStyle(color: AppColors.danger)),
