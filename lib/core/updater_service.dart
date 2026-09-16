@@ -22,11 +22,14 @@ class UpdateInfo {
 ///      over the running install and starts the new exe.
 ///
 /// On web this only reports the update (no self-replace possible).
+/// Текущая версия приложения. Держать в синхроне с version в pubspec.yaml.
+const String kSquallVersion = '1.3.3';
+
 class UpdaterService {
   static const repo = 'https://api.github.com/repos/kotvhapke/Squall/releases/latest';
   static const _assetName = 'squall-windows.zip';
 
-  static Future<UpdateInfo> checkForUpdate({String currentVersion = '1.3.2'}) async {
+  static Future<UpdateInfo> checkForUpdate({String currentVersion = kSquallVersion}) async {
     try {
       final res = await http.get(Uri.parse(repo), headers: {'Accept': 'application/vnd.github+json'});
       if (res.statusCode != 200) {
@@ -36,7 +39,9 @@ class UpdaterService {
       final version = (data['tag_name'] as String? ?? '').replaceAll('v', '');
       final notes = data['body'] as String?;
       final assetUrl = _findAsset(data);
-      return UpdateInfo(version: version, available: _isNewer(version, currentVersion), url: assetUrl, notes: notes);
+      // Не предлагаем обновление, если архив для Windows не загружен в релиз.
+      final available = assetUrl.isNotEmpty && _isNewer(version, currentVersion);
+      return UpdateInfo(version: version, available: available, url: assetUrl, notes: notes);
     } catch (_) {
       return UpdateInfo(version: currentVersion, available: false, url: '');
     }
