@@ -165,9 +165,23 @@ class _AppShellState extends State<AppShell> with TickerProviderStateMixin {
             child: Column(
               children: [
                 const SizedBox(height: 12),
+                // Чистая статичная плитка с лого (без «дышащего» свечения)
                 GestureDetector(
                   onTap: () => setState(() => _navIndex = 0),
-                  child: Padding(padding: const EdgeInsets.all(10), child: AppEffects.squallLogo(size: 32)),
+                  child: Container(
+                    width: 48, height: 48,
+                    decoration: BoxDecoration(
+                      color: AppColors.serverIconBg,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.electricBlue.withValues(alpha: 0.4), width: 1),
+                    ),
+                    alignment: Alignment.center,
+                    child: Image.asset(
+                      'assets/branding/squall-icon-user.png',
+                      width: 26, height: 26,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Container(height: 1, margin: const EdgeInsets.symmetric(horizontal: 18), color: AppColors.border),

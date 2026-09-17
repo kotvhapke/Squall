@@ -149,6 +149,7 @@ class _PartyRoomState extends State<PartyRoom> {
 
   Widget _header() {
     final otherCount = _members.where((m) => m['user_id'] != SupabaseService.userId).length;
+    final gameInitial = widget.game.isNotEmpty ? widget.game[0].toUpperCase() : 'G';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
       decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.border, width: 1))),
@@ -156,29 +157,40 @@ class _PartyRoomState extends State<PartyRoom> {
         SquallBackButton(onPressed: _leave),
         const SizedBox(width: 4),
         Container(
-          width: 36, height: 36,
-          decoration: BoxDecoration(color: AppColors.serverIconBg, borderRadius: BorderRadius.circular(8), border: Border.all(color: AppColors.border)),
+          width: 38, height: 38,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [AppColors.blue, AppColors.electricBlue]),
+            borderRadius: BorderRadius.circular(10),
+          ),
           alignment: Alignment.center,
-          child: Text(widget.game[0].toUpperCase(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.electricBlue)),
+          child: Text(gameInitial, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white)),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
         Expanded(child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(widget.game, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-            Text('${_members.length} members', style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
+            Text(widget.game, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary), overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 1),
+            Text(otherCount > 0
+                ? '$otherCount ${otherCount == 1 ? 'player' : 'players'} in party'
+                : 'Waiting for players...',
+                style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
           ],
         )),
         if (otherCount > 0)
           GestureDetector(
             onTap: _startVoice,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(color: AppColors.voiceActive.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10), border: Border.all(color: AppColors.voiceActive.withValues(alpha: 0.3))),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [AppColors.blue, AppColors.electricBlue]),
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [BoxShadow(color: AppColors.electricBlue.withValues(alpha: 0.3), blurRadius: 12, spreadRadius: -2)],
+              ),
               child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.headphones, size: 16, color: AppColors.voiceActive),
+                Icon(Icons.headphones, size: 16, color: Colors.white),
                 SizedBox(width: 6),
-                Text('Voice', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.voiceActive)),
+                Text('Voice', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
               ]),
             ),
           ),
@@ -209,37 +221,84 @@ class _PartyRoomState extends State<PartyRoom> {
 
   Widget _chatView() {
     return Column(children: [
-      // Member avatars bar
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.border, width: 1))),
-        height: 64,
-        child: ListView(
-          scrollDirection: Axis.horizontal,
-          children: _members.map((m) {
-            final isMe = m['user_id'] == SupabaseService.userId;
-            final name = m['display_name'] as String? ?? m['username'] as String? ?? '?';
-            final avatar = m['avatar_url'] as String?;
-            return Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                SquallAvatar(name: name, avatarUrl: avatar, size: 28),
-                Text(isMe ? 'You' : (name.length > 6 ? '${name.substring(0, 5)}…' : name), style: const TextStyle(fontSize: 8, color: AppColors.textMuted)),
-              ]),
-            );
-          }).toList(),
-        ),
-      ),
-      // Messages
       Expanded(
-        child: _messages.isEmpty
-            ? const Center(child: Text('No messages yet', style: TextStyle(color: AppColors.textMuted, fontSize: 13)))
-            : ListView.builder(
-                controller: _scrollCtrl,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: _messages.length,
-                itemBuilder: (_, i) => _msgTile(_messages[i]),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Messages
+            Expanded(
+              child: _messages.isEmpty
+                  ? const Center(child: Text('No messages yet — say hi!', style: TextStyle(color: AppColors.textMuted, fontSize: 13)))
+                  : ListView.builder(
+                      controller: _scrollCtrl,
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      itemCount: _messages.length,
+                      itemBuilder: (_, i) => _msgTile(_messages[i]),
+                    ),
+            ),
+            // Member list panel
+            Container(
+              width: 230,
+              decoration: BoxDecoration(
+                border: Border(left: BorderSide(color: AppColors.border, width: 1)),
               ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+                  child: Text('Members — ${_members.length}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textMuted, letterSpacing: 0.8)),
+                ),
+                const Divider(height: 1, color: AppColors.border),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    children: _members.map((m) {
+                      final isMe = m['user_id'] == SupabaseService.userId;
+                      final name = m['display_name'] as String? ?? m['username'] as String? ?? '?';
+                      final username = m['username'] as String? ?? '';
+                      final avatar = m['avatar_url'] as String?;
+                      final status = m['status'] as String? ?? 'offline';
+                      return Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isMe ? AppColors.blue.withValues(alpha: 0.12) : AppColors.panelBgOpaque,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: isMe ? AppColors.electricBlue.withValues(alpha: 0.25) : AppColors.border),
+                        ),
+                        child: Row(children: [
+                          Stack(children: [
+                            SquallAvatar(name: name, avatarUrl: avatar, size: 34),
+                            Positioned(
+                              bottom: 0, right: 0,
+                              child: Container(
+                                width: 10, height: 10,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: status == 'online' ? AppColors.voiceActive : AppColors.textMuted,
+                                  border: Border.all(color: AppColors.background, width: 1.5),
+                                ),
+                              ),
+                            ),
+                          ]),
+                          const SizedBox(width: 10),
+                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(isMe ? 'You' : name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary), overflow: TextOverflow.ellipsis),
+                            Text('@$username', style: const TextStyle(fontSize: 10, color: AppColors.textMuted), overflow: TextOverflow.ellipsis),
+                          ])),
+                          if (isMe)
+                            const Padding(
+                              padding: EdgeInsets.only(left: 6),
+                              child: Icon(Icons.person_pin, size: 14, color: AppColors.electricBlue),
+                            ),
+                        ]),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ]),
+            ),
+          ],
+        ),
       ),
       // Input
       Container(

@@ -23,7 +23,7 @@ class UpdateInfo {
 ///
 /// On web this only reports the update (no self-replace possible).
 /// Текущая версия приложения. Держать в синхроне с version в pubspec.yaml.
-const String kSquallVersion = '1.3.7';
+const String kSquallVersion = '1.3.8';
 
 class UpdaterService {
   static const repo = 'https://api.github.com/repos/kotvhapke/Squall/releases/latest';

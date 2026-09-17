@@ -175,39 +175,97 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
 
   Widget _pendingList() {
     if (_pending.isEmpty) return const EmptyState(icon: Icons.hourglass_empty_outlined, title: 'No pending requests', subtitle: '');
-    return ListView.builder(
+
+    final incoming = _pending.where((r) => r['receiver_id'] == SupabaseService.userId).toList();
+    final outgoing = _pending.where((r) => r['sender_id'] == SupabaseService.userId).toList();
+
+    return ListView(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      itemCount: _pending.length,
-      itemBuilder: (_, i) {
-        final req = _pending[i];
-        final sender = req['sender'] as Map<String, dynamic>? ?? {};
-        final name = sender['display_name'] as String? ?? sender['username'] as String? ?? '?';
-        final isIncoming = req['receiver_id'] == SupabaseService.userId;
-        return ListTile(
-          leading: SquallAvatar(name: name, size: 40),
-          title: Text(name, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14)),
-          subtitle: Text(isIncoming ? 'Wants to be your friend' : 'Request sent', style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
-          trailing: isIncoming
-              ? Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextButton(onPressed: () async {
-                      await SupabaseService.respondToRequest(req['id'] as int, 'accepted');
-                      await _load();
-                    }, child: const Text('Accept', style: TextStyle(fontSize: 12, color: AppColors.voiceActive))),
-                    const SizedBox(width: 4),
-                    TextButton(onPressed: () async {
-                      await SupabaseService.respondToRequest(req['id'] as int, 'rejected');
-                      await _load();
-                    }, child: const Text('Decline', style: TextStyle(fontSize: 12, color: AppColors.textMuted))),
-                  ],
-                )
-              : TextButton(onPressed: () async {
-                  await SupabaseService.respondToRequest(req['id'] as int, 'cancelled');
-                  await _load();
-                }, child: const Text('Cancel', style: TextStyle(fontSize: 12, color: AppColors.textMuted))),
-        );
-      },
+      children: [
+        if (incoming.isNotEmpty) ...[
+          _sectionLabel('INCOMING', incoming.length),
+          ...incoming.map((r) => _pendingTile(r, incoming: true)),
+        ],
+        if (outgoing.isNotEmpty) ...[
+          if (incoming.isNotEmpty) const SizedBox(height: 12),
+          _sectionLabel('SENT BY YOU', outgoing.length),
+          ...outgoing.map((r) => _pendingTile(r, incoming: false)),
+        ],
+      ],
+    );
+  }
+
+  Widget _sectionLabel(String text, int count) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+      child: Text('$text — $count', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.textMuted, letterSpacing: 0.8)),
+    );
+  }
+
+  Widget _pendingTile(Map<String, dynamic> req, {required bool incoming}) {
+    // Для входящих — тот, кто отправил. Для исходящих — тот, кому отправили.
+    final other = incoming
+        ? (req['sender'] as Map<String, dynamic>? ?? {})
+        : (req['receiver'] as Map<String, dynamic>? ?? {});
+    final name = other['display_name'] as String? ?? other['username'] as String? ?? '?';
+    final username = other['username'] as String? ?? '';
+    final avatar = other['avatar_url'] as String?;
+    final status = other['status'] as String? ?? 'offline';
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.panelBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(children: [
+        Stack(children: [
+          SquallAvatar(name: name, avatarUrl: avatar, size: 44),
+          Positioned(
+            bottom: 0, right: 0,
+            child: Container(
+              width: 12, height: 12,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: status == 'online' ? AppColors.voiceActive : AppColors.textMuted,
+                border: Border.all(color: AppColors.background, width: 2),
+              ),
+            ),
+          ),
+        ]),
+        const SizedBox(width: 12),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Flexible(child: Text(name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary), overflow: TextOverflow.ellipsis)),
+            if (avatar != null && avatar.isNotEmpty) ...[
+              const SizedBox(width: 6),
+              Icon(Icons.badge_outlined, size: 12, color: AppColors.textMuted),
+            ],
+          ]),
+          const SizedBox(height: 2),
+          Text('@$username', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+        ])),
+        const SizedBox(width: 8),
+        if (incoming)
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            TextButton(onPressed: () async {
+              await SupabaseService.respondToRequest(req['id'] as int, 'accepted');
+              await _load();
+            }, child: const Text('Accept', style: TextStyle(fontSize: 12, color: AppColors.voiceActive))),
+            const SizedBox(width: 4),
+            TextButton(onPressed: () async {
+              await SupabaseService.respondToRequest(req['id'] as int, 'rejected');
+              await _load();
+            }, child: const Text('Decline', style: TextStyle(fontSize: 12, color: AppColors.textMuted))),
+          ])
+        else
+          TextButton(onPressed: () async {
+            await SupabaseService.respondToRequest(req['id'] as int, 'cancelled');
+            await _load();
+          }, child: const Text('Cancel', style: TextStyle(fontSize: 12, color: AppColors.textMuted))),
+      ]),
     );
   }
 }
