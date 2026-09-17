@@ -24,7 +24,6 @@ class LiveKitService {
   }
 
   static Future<Room> _connect(String token, String roomName) async {
-    // Only one connection at a time
     await disconnect();
     final url = svc.livekitUrl;
     if (!url.startsWith('wss://') && !url.startsWith('ws://')) {
@@ -41,6 +40,7 @@ class LiveKitService {
     _room = null;
   }
 
+  // --- mic toggle ---
   static Future<void> toggleMic() async {
     final lp = _lp;
     if (lp == null) return;
@@ -85,4 +85,29 @@ class LiveKitService {
 
   static List<RemoteParticipant> get remoteParticipants =>
       _room != null ? _room!.remoteParticipants.values.toList() : [];
+
+  // --- Device enumeration ---
+  static Future<List<Map<String, String>>> listAudioInputs() async {
+    final devices = await Hardware.instance.enumerateDevices();
+    return devices
+        .where((d) => d.kind == 'audioinput')
+        .map((d) => {'id': d.deviceId, 'label': d.label.isNotEmpty ? d.label : d.deviceId})
+        .toList();
+  }
+
+  /// Switch the microphone to a different device by [deviceId].
+  /// Pass null to use the system default.
+  static Future<void> setAudioInput(String? deviceId) async {
+    final lp = _lp;
+    if (lp == null) return;
+    final micPub = lp.getTrackPublicationBySource(TrackSource.microphone) as LocalTrackPublication?;
+    if (micPub?.track case final LocalAudioTrack audioTrack?) {
+      await audioTrack.restartTrack(
+        AudioCaptureOptions(deviceId: deviceId, echoCancellation: true, noiseSuppression: true),
+      );
+    }
+  }
+
+  static String? _currentDeviceId;
+  static String? get currentAudioDeviceId => _currentDeviceId;
 }

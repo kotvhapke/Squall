@@ -44,6 +44,15 @@ class _CallRoomState extends State<CallRoom> with WidgetsBindingObserver {
   int _callDuration = 0;
   String? _viewingScreenShare; // identity of participant whose screen to watch
 
+  /// identity (user id) -> display profile (name, avatar, @username)
+  final Map<String, Map<String, dynamic>> _profiles = {};
+  bool _loadedProfiles = false;
+
+  /// микрофоны: deviceId -> label. Пустой = системный по умолчанию.
+  List<Map<String, String>> _micDevices = [];
+  String? _selectedMicId;
+  bool _micPickerOpen = false;
+
   @override
   void initState() {
     super.initState();
@@ -55,6 +64,14 @@ class _CallRoomState extends State<CallRoom> with WidgetsBindingObserver {
     }
     _loadProfile();
     _connect();
+    _loadMics();
+  }
+
+  Future<void> _loadMics() async {
+    try {
+      final devices = await LiveKitService.listAudioInputs();
+      if (mounted) setState(() => _micDevices = devices);
+    } catch (_) {}
   }
 
   Future<void> _loadProfile() async {
@@ -67,6 +84,44 @@ class _CallRoomState extends State<CallRoom> with WidgetsBindingObserver {
       });
     }
   }
+
+  /// Загружает профили всех участников звонка (remote) по их identity (user id),
+  /// чтобы показывать ники и аватарки вместо хэшей.
+  Future<void> _loadRemoteProfiles() async {
+    if (_loadedProfiles) return;
+    final participants = LiveKitService.remoteParticipants;
+    if (participants.isEmpty) return;
+    final ids = participants.map((p) => p.identity).where((id) => id.isNotEmpty).toList();
+    if (ids.isEmpty) return;
+    try {
+      final users = await SupabaseService.getUsersByIds(ids);
+      if (mounted) {
+        setState(() {
+          _loadedProfiles = true;
+          for (final u in users) {
+            final id = u['id'] as String?;
+            if (id != null) _profiles[id] = u;
+          }
+        });
+      }
+    } catch (_) {
+      _loadedProfiles = true;
+    }
+  }
+
+  Map<String, dynamic> _profileFor(String identity) => _profiles[identity] ?? const {};
+
+  String _displayNameFor(String identity) {
+    final p = _profiles[identity];
+    if (p != null) {
+      return p['display_name'] as String? ?? p['username'] as String? ?? identity;
+    }
+    return identity;
+  }
+
+  String? _avatarFor(String identity) => _profiles[identity]?['avatar_url'] as String?;
+
+  String _statusFor(String identity) => _profiles[identity]?['status'] as String? ?? 'online';
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -107,6 +162,7 @@ class _CallRoomState extends State<CallRoom> with WidgetsBindingObserver {
         _connecting = false;
         _micOn = true;
       });
+      _loadRemoteProfiles();
     } catch (e) {
       setState(() {
         _connecting = false;
@@ -339,7 +395,7 @@ class _CallRoomState extends State<CallRoom> with WidgetsBindingObserver {
           SquallAvatar(name: _localName, avatarUrl: _localAvatar, size: 48, isSpeaking: _micOn && _localName.isNotEmpty),
           ...participants.map((p) => Padding(
             padding: const EdgeInsets.only(left: 8),
-            child: SquallAvatar(name: p.identity, size: 48, isSpeaking: _isSpeaking(p)),
+            child: SquallAvatar(name: _displayNameFor(p.identity), avatarUrl: _avatarFor(p.identity), size: 48, isSpeaking: _isSpeaking(p)),
           )),
         ],
       ),
@@ -365,9 +421,9 @@ class _CallRoomState extends State<CallRoom> with WidgetsBindingObserver {
         ...participants.map((p) => Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: _participantTile(
-            name: p.identity,
-            avatarUrl: null,
-            status: 'online',
+            name: _displayNameFor(p.identity),
+            avatarUrl: _avatarFor(p.identity),
+            status: _statusFor(p.identity),
             isSpeaking: _isSpeaking(p),
             subtitle: _isSpeaking(p) ? 'Speaking...' : null,
             micEnabled: p.trackPublications.values.any((t) => t.source == TrackSource.microphone && !t.muted),
@@ -493,10 +549,87 @@ class _CallRoomState extends State<CallRoom> with WidgetsBindingObserver {
           _ctrlBtn(Icons.mic, _micOn, _toggleMic),
           _ctrlBtn(Icons.videocam, _camOn, _toggleCamera),
           _ctrlBtn(Icons.monitor, LiveKitService.screenShareEnabled, _toggleScreenShare),
+          _micSelectorBtn(),
           _ctrlBtn(Icons.call_end, false, _leave, danger: true),
         ],
       ),
     );
+  }
+
+  Widget _micSelectorBtn() {
+    return GestureDetector(
+      onTap: _showMicPicker,
+      child: Container(
+        width: 56, height: 56,
+        decoration: BoxDecoration(
+          color: AppColors.panelBgOpaque,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.border),
+        ),
+        child: const Icon(Icons.mic_external_on_outlined, size: 22, color: AppColors.textSecondary),
+      ),
+    );
+  }
+
+  Future<void> _showMicPicker() async {
+    if (_micPickerOpen) return;
+    _micPickerOpen = true;
+    // При первом открытии перечисляем устройства ещё раз
+    if (_micDevices.isEmpty) {
+      try {
+        final devices = await LiveKitService.listAudioInputs();
+        if (mounted) setState(() => _micDevices = devices);
+      } catch (_) {}
+    }
+    _micPickerOpen = false;
+
+    if (!mounted) return;
+    final current = _selectedMicId ?? LiveKitService.currentAudioDeviceId;
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppColors.darkBlue,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('Microphone', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+            ),
+            const Divider(height: 1, color: AppColors.border),
+            if (_micDevices.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(20),
+                child: Text('No microphones found', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
+              )
+            else
+              ..._micDevices.map((d) {
+                final id = d['id'];
+                final label = d['label'] ?? 'Microphone';
+                final selectedNow = id == current;
+                return ListTile(
+                  leading: Icon(Icons.mic, size: 20, color: selectedNow ? AppColors.electricBlue : AppColors.textMuted),
+                  title: Text(label, style: TextStyle(fontSize: 13, color: AppColors.textPrimary, overflow: TextOverflow.ellipsis)),
+                  trailing: selectedNow ? const Icon(Icons.check, size: 18, color: AppColors.electricBlue) : null,
+                  onTap: () => Navigator.pop(ctx, id),
+                );
+              }),
+          ],
+        ),
+      ),
+    );
+
+    if (selected != null && selected != current) {
+      try {
+        await LiveKitService.setAudioInput(selected);
+        if (mounted) setState(() => _selectedMicId = selected);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Mic switch error: $e')));
+        }
+      }
+    }
   }
 
   Widget _ctrlBtn(IconData icon, bool active, VoidCallback onTap, {bool danger = false}) {
