@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:squall/core/theme/app_colors.dart';
+import 'package:squall/core/theme/atmospheric_background.dart';
 import 'package:squall/core/supabase_service.dart';
 import 'package:squall/shared/widgets/squall_avatar.dart';
 import 'package:squall/shared/widgets/squall_button.dart';
@@ -81,9 +82,9 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> with Single
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Column(children: [
-        _header(),
+      body: AppBackground(
+        child: Column(children: [
+          _header(),
         Container(
           decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.border, width: 1))),
           child: TabBar(
@@ -110,6 +111,7 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> with Single
                   : _membersOnlyView(),
         ),
       ]),
+      ),
     );
   }
 

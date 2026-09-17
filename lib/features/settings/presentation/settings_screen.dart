@@ -8,6 +8,7 @@ import 'package:squall/core/settings/settings_provider.dart';
 import 'package:squall/core/translations.dart';
 import 'package:squall/core/updater_service.dart';
 import 'package:squall/core/fullscreen_service.dart';
+import 'package:squall/core/theme/atmospheric_background.dart';
 import 'package:squall/shared/widgets/squall_back_button.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -32,8 +33,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final glowColor = context.select<SettingsProvider, String>((s) => s.glowColor);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Column(
+      body: AppBackground(
+        child: Column(
         children: [
           _header(),
           Expanded(
@@ -95,6 +96,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

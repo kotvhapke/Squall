@@ -161,7 +161,7 @@ class _AppShellState extends State<AppShell> with TickerProviderStateMixin {
         children: [
           Container(
             width: 68,
-            decoration: BoxDecoration(color: AppColors.background, border: Border(right: BorderSide(color: AppColors.border, width: 1))),
+            decoration: BoxDecoration(color: AppColors.background.withValues(alpha: 0.6), border: Border(right: BorderSide(color: AppColors.border, width: 1))),
             child: Column(
               children: [
                 const SizedBox(height: 12),

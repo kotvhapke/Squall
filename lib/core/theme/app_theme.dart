@@ -7,7 +7,7 @@ class AppTheme {
   static ThemeData get darkTheme {
     return ThemeData(
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: AppColors.background,
+      scaffoldBackgroundColor: Colors.transparent,
       fontFamily: fontFamily,
       colorScheme: const ColorScheme.dark(
         primary: AppColors.blue,

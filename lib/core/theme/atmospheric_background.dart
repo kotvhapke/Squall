@@ -2,6 +2,25 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:squall/core/theme/app_colors.dart';
 
+/// Статичный атмосферный фон (градиент + цветные свечения) без анимаций.
+/// Используется на модальных экранах, чтобы фон не был плоским чёрным.
+class AppBackground extends StatelessWidget {
+  final Widget child;
+
+  const AppBackground({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        const CustomPaint(painter: _BaseBackgroundPainter()),
+        child,
+      ],
+    );
+  }
+}
+
 class AtmosphericBackground extends StatefulWidget {
   final Widget child;
   final bool reducedEffects;
@@ -76,19 +95,22 @@ class _AtmosphericBackgroundState extends State<AtmosphericBackground>
 
   @override
   Widget build(BuildContext context) {
-    if (widget.reducedEffects) return widget.child;
-
     final fogFactor = widget.fogIntensity / 100;
     final arcFactor = widget.arcIntensity / 100;
+    final showEffects = !widget.reducedEffects && (fogFactor > 0.01 || arcFactor > 0.01);
 
-    return AnimatedBuilder(
-      animation: _fogController,
-      builder: (context, child) {
-        return Stack(
-          children: [
-            widget.child,
-            if (fogFactor > 0.01 || arcFactor > 0.01)
-              IgnorePointer(
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Базовый атмосферный фон: градиент + цветные свечения.
+        // Виден всегда (даже с reducedEffects), т.к. это фон, а не эффекты.
+        const CustomPaint(painter: _BaseBackgroundPainter()),
+        widget.child,
+        if (showEffects)
+          AnimatedBuilder(
+            animation: _fogController,
+            builder: (context, child) {
+              return IgnorePointer(
                 child: CustomPaint(
                   size: Size.infinite,
                   painter: _FogPainter(
@@ -100,12 +122,58 @@ class _AtmosphericBackgroundState extends State<AtmosphericBackground>
                     arcFactor: arcFactor,
                   ),
                 ),
-              ),
-          ],
-        );
-      },
+              );
+            },
+          ),
+      ],
     );
   }
+}
+
+/// Рисует базовый тёмный фон: вертикальный градиент и мягкие цветные
+/// свечения по углам (как у современных мессенджеров).
+class _BaseBackgroundPainter extends CustomPainter {
+  const _BaseBackgroundPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+
+    // Вертикальный градиент: глубокий синий сверху → почти чёрный снизу
+    final base = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color(0xFF0B1A30),
+          Color(0xFF060B16),
+          Color(0xFF03050A),
+        ],
+        stops: [0.0, 0.5, 1.0],
+      ).createShader(rect);
+    canvas.drawRect(rect, base);
+
+    final minSide = size.shortestSide;
+
+    // Свечение сверху-слева (холодный неон)
+    _glow(canvas, size, const Alignment(-1.2, -1.1), AppColors.coldNeon, 0.12, minSide * 0.75);
+    // Свечение сверху-справа (электрик)
+    _glow(canvas, size, const Alignment(1.3, -0.9), AppColors.electricBlue, 0.12, minSide * 0.7);
+    // Тёплое свечение снизу-по-центру
+    _glow(canvas, size, const Alignment(0.0, 1.4), AppColors.blue, 0.14, minSide * 0.8);
+  }
+
+  void _glow(Canvas canvas, Size size, Alignment align, Color color, double alpha, double radius) {
+    final center = align.alongSize(size);
+    final paint = Paint()
+      ..shader = RadialGradient(
+        colors: [color.withValues(alpha: alpha), color.withValues(alpha: 0)],
+      ).createShader(Rect.fromCircle(center: center, radius: radius));
+    canvas.drawCircle(center, radius, paint);
+  }
+
+  @override
+  bool shouldRepaint(_BaseBackgroundPainter old) => false;
 }
 
 class _FogParticle {

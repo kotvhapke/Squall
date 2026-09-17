@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:squall/core/theme/app_colors.dart';
+import 'package:squall/core/theme/atmospheric_background.dart';
 import 'package:squall/core/supabase_service.dart';
 import 'package:squall/features/calls/presentation/call_room.dart';
 import 'package:squall/shared/widgets/squall_avatar.dart';
@@ -133,8 +134,8 @@ class _PartyRoomState extends State<PartyRoom> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Column(children: [
+      body: AppBackground(
+        child: Column(children: [
         _header(),
         Expanded(child: _loading
             ? const LoadingState()
@@ -142,6 +143,7 @@ class _PartyRoomState extends State<PartyRoom> {
                 ? _aloneView()
                 : _chatView()),
       ]),
+      ),
     );
   }
 

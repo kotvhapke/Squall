@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:squall/core/theme/app_colors.dart';
+import 'package:squall/core/theme/atmospheric_background.dart';
 import 'package:squall/core/supabase_service.dart';
 import 'package:squall/core/livekit_service.dart';
 import 'package:squall/core/feature_flags.dart';
@@ -222,9 +223,11 @@ class _CallRoomState extends State<CallRoom> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
+      body: AppBackground(
+        child: Column(
+          children: [
+            AppBar(
+        backgroundColor: Colors.transparent,
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
         leading: SquallBackButton(onPressed: _leave),
@@ -266,7 +269,10 @@ class _CallRoomState extends State<CallRoom> with WidgetsBindingObserver {
           ),
         ],
       ),
-      body: _buildBody(),
+            Expanded(child: _buildBody()),
+          ],
+        ),
+      ),
     );
   }
 
